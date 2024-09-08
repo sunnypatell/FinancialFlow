@@ -26,10 +26,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Toast } from "@/components/ui/toast"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, CreditCard, PiggyBank, TrendingUp, Activity, Settings, HelpCircle, LogOut, Trash2 } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2 } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
