@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2 } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -947,6 +947,26 @@ export default function FinanceTracker() {
               <p className="text-sm">&copy; This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author.</p>
             </div>
             <div className="w-full md:w-1/3 text-center md:text-right mt-4 md:mt-0">
+            <div className="flex justify-center md:justify-end space-x-4">
+          <Button variant="ghost" size="icon" asChild>
+            <a href="https://github.com/sunnypatell/FinancialFlow" target="_blank" rel="noopener noreferrer">
+              <Github className="h-5 w-5" />
+              <span className="sr-only">GitHub</span>
+            </a>
+          </Button>
+          <Button variant="ghost" size="icon" asChild>
+            <a href="https://www.linkedin.com/in/sunny-patel-30b460204/" target="_blank" rel="noopener noreferrer">
+              <Linkedin className="h-5 w-5" />
+              <span className="sr-only">LinkedIn</span>
+            </a>
+          </Button>
+          <Button variant="ghost" size="icon" asChild>
+            <a href="https://www.sunnypatel.net" target="_blank" rel="noopener noreferrer">
+              <Globe className="h-5 w-5" />
+              <span className="sr-only">Portfolio</span>
+            </a>
+          </Button>
+        </div>
             </div>
           </div>
         </div>
