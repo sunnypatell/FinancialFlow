@@ -23,10 +23,10 @@
 
 ## 2. Architecture Overview
 
-The architecture of FinancialFlow is primarily based on **Next.js** for server-side rendering and routing. It uses **React** to build reusable components and **Framer Motion** for smooth animations. Data visualizations are powered by **Chart.js**, and persistent data is handled through **local storage**.
+The architecture of FinancialFlow is primarily based on **Next.js** for server-side rendering and routing. It uses **Typescript** to build reusable components and **Framer Motion** for smooth animations. Data visualizations are powered by **Chart.js**, and persistent data is handled through **local storage**.
 
 ### Key Highlights:
-- **Frontend**: Built with **React** and **Next.js** for fast and responsive experiences.
+- **Frontend**: Built with **Typescript** and **Next.js** for fast and responsive experiences.
 - **State Management**: Implemented using React Hooks (`useState`, `useEffect`) for local state.
 - **Modular UI**: Reusable components ensure scalability and maintainability.
 - **Animations**: Powered by **Framer Motion** for smooth transitions.
@@ -35,7 +35,7 @@ The architecture of FinancialFlow is primarily based on **Next.js** for server-s
 
 The application leverages modern technologies to deliver an intuitive user experience:
 
-- **Framework**: Next.js (React)
+- **Framework**: Next.js (Typescript)
 - **State Management**: React hooks (`useState`, `useEffect`)
 - **Charts**: Chart.js for interactive data visualizations
 - **Icons**: Lucide-react for icons throughout the UI
@@ -153,7 +153,7 @@ Please ensure all new code includes appropriate tests and adheres to the project
 
 ## 14. License
 
-This project is licensed under the **MIT License**. You are free to use, modify, and distribute this software, but attribution to the original author is required. For more details, refer to the `LICENSE` file in the repository.
+This project is licensed under the **MIT License**. You are free to use, and distribute this software, but attribution to the original author is required.
 
 ## 15. Contact
 
@@ -161,4 +161,4 @@ If you have any questions, feedback, or suggestions, feel free to reach out:
 
 - **Sunny Patel**: [sunnypatel124555@gmail.com](mailto:sunnypatel124555@gmail.com)
 
-You can also contribute or report issues directly via the [GitHub repository](https://github.com/your-username/financialflow).
+You can also contribute or report issues directly via the [GitHub repository](https://github.com/sunnypatell/financialflow).
