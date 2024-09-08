@@ -1,6 +1,6 @@
 # FinancialFlow 💸
-![FinancialFlow](ss2.png)
-![FinancialFlow2](ss1.png)
+![FinancialFlow](ss1.png)
+![FinancialFlow2](ss2.png)
 
 ## Table of Contents
 1. [Introduction](#introduction)
