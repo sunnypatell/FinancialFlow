@@ -1,4 +1,6 @@
 # FinancialFlow 💸
+![FinancialFlow](ss2.png)
+![FinancialFlow](ss1.png)
 
 ## Table of Contents
 1. [Introduction](#introduction)

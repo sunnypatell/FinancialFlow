@@ -884,7 +884,7 @@ export default function FinanceTracker() {
                   <CardTitle>Budget Recommendations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 text-lg">
                     {getBudgetComparisonData().map((item) => (
                       <li key={item.category}>
                         {item.spent > item.limit
@@ -911,7 +911,7 @@ export default function FinanceTracker() {
                     </p>
                   </div>
                   <div className="mt-4">
-                    <p className="text-sm">
+                    <p className="text-xl">
                       {financialHealthScore >= 80
                         ? "🏆 Congratulations on your excellent financial health! You're a true money maestro. 💰 Your smart decisions have paid off, creating a solid foundation for your future. Keep maximizing your savings, exploring diverse investment opportunities, and staying informed about market trends. Consider setting more ambitious financial goals, like early retirement or starting a passion project. Remember, even at the top, there's always room for growth – maybe it's time to mentor others or contribute to charitable causes you care about. 🌟"
                         : financialHealthScore >= 60
