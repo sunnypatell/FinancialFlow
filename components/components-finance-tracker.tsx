@@ -1087,7 +1087,7 @@ export default function FinanceTracker() {
             <div className="w-full md:w-1/3 text-center mt-4 md:mt-0">
               <p className="text-sm">&copy; 2024 Sunny Patel - sunnypatel124555@gmail.com</p>
               <p className="text-sm">&copy; This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author.</p>
-              <Button variant="link" className="text-sm text-white" onClick={() => setShowTosDialog(true)}>
+              <Button variant="link" className="mt-4 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => setShowTosDialog(true)}>
                 Terms of Service ⚠️
               </Button>
             </div>
