@@ -79,11 +79,11 @@ const categories = [
 ]
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
 }
 
 const validateNumber = (value: string): boolean => {
-  return /^\d+(\.\d{1,2})?$/.test(value)
+  return /^\d+(\.\d{1,2})?$/.test(value) && parseFloat(value) >= 0
 }
 
 const validateName = (value: string): boolean => {
@@ -91,6 +91,7 @@ const validateName = (value: string): boolean => {
 }
 
 const calculateFinancialHealth = (income: number, expenses: number, savings: number, debt: number): number => {
+  if (income === 0) return 0
   const savingsRate = savings / income
   const debtToIncomeRatio = debt / income
   const expenseRatio = expenses / income
@@ -192,13 +193,13 @@ export default function FinanceTracker() {
       setBalance(initialBalance)
       setIncome(monthlyIncome)
       setExpenses(monthlyExpenses)
-      setSavings(initialBalance + monthlyIncome - monthlyExpenses)
+      setSavings(initialBalance)
 
       const currentDate = new Date().toISOString().split('T')[0]
       setTransactions([
         { id: 1, date: currentDate, description: 'Initial Balance', amount: initialBalance, type: 'income', category: 'Other' },
         { id: 2, date: currentDate, description: 'Monthly Income', amount: monthlyIncome, type: 'income', category: 'Other' },
-        { id: 3, date: currentDate, description: 'Monthly Expenses', amount: monthlyExpenses, type: 'expense', category: 'Other' },
+        { id: 3, date: currentDate, description: 'Monthly Expenses', amount: -monthlyExpenses, type: 'expense', category: 'Other' },
       ])
 
       setShowQuestionnaire(false)
@@ -366,32 +367,28 @@ export default function FinanceTracker() {
     const recommendations = [];
     const totalIncome = income;
     const totalExpenses = expenses;
-    const savingsRate = (savings / totalIncome) * 100;
+    const savingsRate = totalIncome > 0 ? (savings / totalIncome) * 100 : 0;
     const budgetComparisonData = getBudgetComparisonData();
 
-    // Check if the array is not empty before reduce
     const highestExpenseCategory = budgetComparisonData.length > 0
-    ? budgetComparisonData.reduce((prev, current) => (prev.spent > current.spent) ? prev : current) : null;
+      ? budgetComparisonData.reduce((prev, current) => (prev.spent > current.spent) ? prev : current)
+      : null;
 
-    // Savings rate recommendation
     if (savingsRate < 20) {
       recommendations.push(`Aim to increase your savings rate to at least 20% of your income. Currently, you're saving ${savingsRate.toFixed(1)}%.`);
     } else {
       recommendations.push(`Great job on your savings! You're currently saving ${savingsRate.toFixed(1)}% of your income.`);
     }
 
-    // Expense reduction recommendation
     if (highestExpenseCategory) {
       recommendations.push(`Your highest expense category is ${highestExpenseCategory.category}. Look for ways to reduce spending in this area, such as finding cheaper alternatives or negotiating better rates.`);
     }
 
-    // Emergency fund recommendation
-    const emergencyFundTarget = totalExpenses * 3; // 3 months of expenses
+    const emergencyFundTarget = totalExpenses * 3;
     if (savings < emergencyFundTarget) {
       recommendations.push(`Work on building an emergency fund of ${formatCurrency(emergencyFundTarget)}. This will cover 3 months of expenses.`);
     }
 
-    // Debt reduction recommendation
     if (debt > 0) {
       const debtToIncomeRatio = (debt / totalIncome) * 100;
       if (debtToIncomeRatio > 36) {
@@ -399,7 +396,6 @@ export default function FinanceTracker() {
       }
     }
 
-    // Income increase recommendation
     if (totalExpenses / totalIncome > 0.7) {
       recommendations.push("Your expenses are taking up a large portion of your income. Consider ways to increase your income, such as asking for a raise, finding a side hustle, or developing new skills.");
     }
@@ -473,10 +469,10 @@ export default function FinanceTracker() {
       {
         label: 'Financial Health',
         data: [
-          (savings / income) * 100,
-          100 - (debt / income) * 100,
-          100 - (expenses / income) * 100,
-          (income / (expenses + savings)) * 100,
+          income > 0 ? (savings / income) * 100 : 0,
+          income > 0 ? 100 - (debt / income) * 100 : 0,
+          income > 0 ? 100 - (expenses / income) * 100 : 0,
+          (expenses + savings) > 0 ? (income / (expenses + savings)) * 100 : 0,
           50, // Placeholder for investment diversification
         ],
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -637,7 +633,7 @@ export default function FinanceTracker() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(balance)}</div>
               <p className="text-xs text-muted-foreground">
-                {balance > 0 ? '+' : ''}{((balance / income) * 100).toFixed(1)}% from last month
+                {balance > 0 ? '+' : ''}{income > 0 ? ((balance / income) * 100).toFixed(1) : 0}% from last month
               </p>
             </CardContent>
           </Card>
@@ -649,7 +645,7 @@ export default function FinanceTracker() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(income)}</div>
               <p className="text-xs text-muted-foreground">
-                +{((income / (expenses + savings)) * 100).toFixed(1)}% from last month
+                +{(expenses + savings) > 0 ? ((income / (expenses + savings)) * 100).toFixed(1) : 0}% from last month
               </p>
             </CardContent>
           </Card>
@@ -661,7 +657,7 @@ export default function FinanceTracker() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(expenses)}</div>
               <p className="text-xs text-muted-foreground">
-                {((expenses / income) * 100).toFixed(1)}% of income
+                {income > 0 ? ((expenses / income) * 100).toFixed(1) : 0}% of income
               </p>
             </CardContent>
           </Card>
@@ -673,7 +669,7 @@ export default function FinanceTracker() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(savings)}</div>
               <p className="text-xs text-muted-foreground">
-                {((savings / income) * 100).toFixed(1)}% of income
+                {income > 0 ? ((savings / income) * 100).toFixed(1) : 0}% of income
               </p>
             </CardContent>
           </Card>
@@ -724,7 +720,7 @@ export default function FinanceTracker() {
                               const label = context.label || '';
                               const value = context.raw as number;
                               const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0) as number;
-                              const percentage = ((value / total) * 100).toFixed(1);
+                              const percentage = total >  0 ? ((value / total) * 100).toFixed(1) : '0.0';
                               return `${label}: ${formatCurrency(value)} (${percentage}%)`;
                             }
                           }
@@ -1057,7 +1053,7 @@ export default function FinanceTracker() {
                         ? "👍 Good job on maintaining a healthy financial status! You're on the right track, but there's potential for even greater success. 📈 Focus on fine-tuning your budget to increase your savings rate. Look for areas where you can trim unnecessary expenses without sacrificing your quality of life. Consider automating your savings and exploring new investment avenues to diversify your portfolio. Don't forget to review and possibly increase your insurance coverage to protect your growing assets. With a few tweaks, you could soon join the ranks of financial excellence! 💪"
                         : financialHealthScore >= 40
                         ? "⚖️ Your financial health is fair, which means you have a solid foundation to build upon. It's time to roll up your sleeves and make some positive changes! 🛠️ Start by creating a detailed budget to understand where every dollar is going. Prioritize paying down high-interest debt while simultaneously building your emergency fund. Look for ways to increase your income, whether through a side hustle or asking for a raise at work. Education is key – consider taking financial literacy courses or reading personal finance books to empower yourself. Remember, small, consistent steps can lead to significant improvements over time. You've got this! 🌱"
-                        : "🚨 Your financial health needs some serious TLC, but don't worry – everyone starts somewhere, and you've already taken the first step by acknowledging it. 🏁 It's time for a financial reset. Start by listing all your debts and creating a repayment plan, focusing on high-interest debts first. Simultaneously, build a small emergency fund to avoid falling back into debt for unexpected expenses. Ruthlessly cut unnecessary expenses and consider temporary lifestyle changes to free up more money. Explore ways to increase your income, even if it means taking on temporary work. Seek free financial counseling services in your community for personalized advice. Remember, this is a marathon, not a sprint – celebrate small victories along the way. With dedication and the right strategies, you can turn your financial health around! 💼🔄"}
+                        : "🚨 Your financial health needs some serious TLC, but don't worry – everyone starts somewhere, and you've already taken the first step by acknowledging it. 🏁 It's time for a financial reset. Start by listing all your debts and creating a repayment plan, focusing on high-interest debts first."}
                     </p>
                   </div>
                 </CardContent>
@@ -1087,9 +1083,6 @@ export default function FinanceTracker() {
               <p className="text-sm">&copy; This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author.</p>
               <Button variant="link" className="mt-4 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => setShowTosDialog(true)}>
                 Terms of Service ⚠️
-              </Button>
-              <Button variant="link" className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 z-50" onClick={() => setShowResetDialog(true)}>
-                Reset All Data ⚠️
               </Button>
             </div>
             <div className="w-full md:w-1/3 text-center md:text-right mt-4 md:mt-0">
@@ -1234,6 +1227,15 @@ export default function FinanceTracker() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Button 
+        variant="outline" 
+        className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 z-50"
+        onClick={() => setShowResetDialog(true)}
+      >
+        Reset All Data ⚠️
+      </Button>
+
       <Toaster />
     </div>
   )
