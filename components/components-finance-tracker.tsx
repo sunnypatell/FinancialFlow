@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
 import { 
-  Chart as ChartJS,
+  Chart as ChartJS, 
   CategoryScale, 
   LinearScale, 
   PointElement, 
@@ -15,7 +15,9 @@ import {
   BarElement, 
   ArcElement,
   RadialLinearScale,
-  Filler
+  Filler,
+  ChartData,
+  ChartOptions
 } from 'chart.js'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard } from 'lucide-react'
 
 ChartJS.register(
@@ -122,10 +124,11 @@ export default function FinanceTracker() {
   const [financialHealthScore, setFinancialHealthScore] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
+  const [showTosDialog, setShowTosDialog] = useState(false)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const chartRef = useRef<ChartJS<"doughnut", number[], unknown> | null>(null);
+  const chartRef = useRef<ChartJS<"doughnut", number[], unknown> | null>(null)
 
   useEffect(() => {
     const storedData = localStorage.getItem('financeTrackerData')
@@ -360,6 +363,51 @@ export default function FinanceTracker() {
       }
     })
   }
+
+  const generateBudgetRecommendations = () => {
+    const recommendations = [];
+    const totalIncome = income;
+    const totalExpenses = expenses;
+    const savingsRate = (savings / totalIncome) * 100;
+    const budgetComparisonData = getBudgetComparisonData();
+
+    // Check if the array is not empty before reduce
+    const highestExpenseCategory = budgetComparisonData.length > 0
+    ? budgetComparisonData.reduce((prev, current) => (prev.spent > current.spent) ? prev : current) : null;
+
+    // Savings rate recommendation
+    if (savingsRate < 20) {
+      recommendations.push(`Aim to increase your savings rate to at least 20% of your income. Currently, you're saving ${savingsRate.toFixed(1)}%.`);
+    } else {
+      recommendations.push(`Great job on your savings! You're currently saving ${savingsRate.toFixed(1)}% of your income.`);
+    }
+
+    // Expense reduction recommendation
+    if (highestExpenseCategory) {
+      recommendations.push(`Your highest expense category is ${highestExpenseCategory.category}. Look for ways to reduce spending in this area, such as finding cheaper alternatives or negotiating better rates.`);
+    }
+
+    // Emergency fund recommendation
+    const emergencyFundTarget = totalExpenses * 3; // 3 months of expenses
+    if (savings < emergencyFundTarget) {
+      recommendations.push(`Work on building an emergency fund of ${formatCurrency(emergencyFundTarget)}. This will cover 3 months of expenses.`);
+    }
+
+    // Debt reduction recommendation
+    if (debt > 0) {
+      const debtToIncomeRatio = (debt / totalIncome) * 100;
+      if (debtToIncomeRatio > 36) {
+        recommendations.push(`Your debt-to-income ratio is high at ${debtToIncomeRatio.toFixed(1)}%. Focus on paying down your debt, starting with high-interest loans.`);
+      }
+    }
+
+    // Income increase recommendation
+    if (totalExpenses / totalIncome > 0.7) {
+      recommendations.push("Your expenses are taking up a large portion of your income. Consider ways to increase your income, such as asking for a raise, finding a side hustle, or developing new skills.");
+    }
+
+    return recommendations;
+  };
 
   const lineChartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -633,13 +681,13 @@ export default function FinanceTracker() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="goals">Goals</TabsTrigger>
-            <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="insights">Insights</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-800">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-gray-700 text-white">Dashboard</TabsTrigger>
+            <TabsTrigger value="transactions" className="data-[state=active]:bg-gray-700 text-white">Transactions</TabsTrigger>
+            <TabsTrigger value="goals" className="data-[state=active]:bg-gray-700 text-white">Goals</TabsTrigger>
+            <TabsTrigger value="budget" className="data-[state=active]:bg-gray-700 text-white">Budget</TabsTrigger>
+            <TabsTrigger value="insights" className="data-[state=active]:bg-gray-700 text-white">Insights</TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -692,7 +740,7 @@ export default function FinanceTracker() {
                         }
                       }
                     }}
-                     ref={chartRef}
+                    ref={chartRef}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     {hoveredSection === 'Savings' && <Wallet className="h-12 w-12 text-teal-500" />}
@@ -980,16 +1028,13 @@ export default function FinanceTracker() {
                   <CardTitle>Budget Recommendations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 text-lg">
-                    {getBudgetComparisonData().map((item) => (
-                      <li key={item.category}>
-                        {item.spent > item.limit
-                          ? `Reduce ${item.category} expenses by ${formatCurrency(item.spent - item.limit)}`
-                          : `You're on track with your ${item.category} budget`}
+                  <ul className="space-y-4 text-lg">
+                    {generateBudgetRecommendations().map((recommendation, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="mr-2 mt-1">💡</span>
+                        <span>{recommendation}</span>
                       </li>
                     ))}
-                    <li>Consider increasing your savings by {formatCurrency(income * 0.1)}</li>
-                    <li>Look for ways to reduce your highest expense category</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -1042,30 +1087,31 @@ export default function FinanceTracker() {
             <div className="w-full md:w-1/3 text-center mt-4 md:mt-0">
               <p className="text-sm">&copy; 2024 Sunny Patel - sunnypatel124555@gmail.com</p>
               <p className="text-sm">&copy; This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author.</p>
+              <Button variant="link" className="text-sm text-white" onClick={() => setShowTosDialog(true)}>
+                Terms of Service ⚠️
+              </Button>
             </div>
             <div className="w-full md:w-1/3 text-center md:text-right mt-4 md:mt-0">
-            <div className="flex justify-center md:justify-end space-x-4">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="https://github.com/sunnypatell/FinancialFlow" target="_blank" rel="noopener noreferrer">
-              <Github className="h-5 w-5" />
-              <span className="sr-only">GitHub</span>
-            </a>
-          </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <a href="https://www.linkedin.com/in/sunny-patel-30b460204/" target="_blank" rel="noopener noreferrer">
-              <Linkedin className="h-5 w-5"
-
- />
-              <span className="sr-only">LinkedIn</span>
-            </a>
-          </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <a href="https://www.sunnypatel.net" target="_blank" rel="noopener noreferrer">
-              <Globe className="h-5 w-5" />
-              <span className="sr-only">Portfolio</span>
-            </a>
-          </Button>
-        </div>
+              <div className="flex justify-center md:justify-end space-x-4">
+                <Button variant="ghost" size="icon" asChild>
+                  <a href="https://github.com/sunnypatell/FinancialFlow" target="_blank" rel="noopener noreferrer">
+                    <Github className="h-5 w-5" />
+                    <span className="sr-only">GitHub</span>
+                  </a>
+                </Button>
+                <Button variant="ghost" size="icon" asChild>
+                  <a href="https://www.linkedin.com/in/sunny-patel-30b460204/" target="_blank" rel="noopener noreferrer">
+                    <Linkedin className="h-5 w-5" />
+                    <span className="sr-only">LinkedIn</span>
+                  </a>
+                </Button>
+                <Button variant="ghost" size="icon" asChild>
+                  <a href="https://www.sunnypatel.net" target="_blank" rel="noopener noreferrer">
+                    <Globe className="h-5 w-5" />
+                    <span className="sr-only">Portfolio</span>
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1134,6 +1180,56 @@ export default function FinanceTracker() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowResetDialog(false)}>Cancel</Button>
             <Button variant="destructive" onClick={resetAllData}>Yes, Reset All Data</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTosDialog} onOpenChange={setShowTosDialog}>
+        <DialogContent className="bg-white text-black max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Terms of Service ⚠️</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[400px] w-full rounded-md border p-4">
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold">1. Acceptance of Terms</h2>
+              <p>By accessing or using FinancialFlow, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.</p>
+
+              <h2 className="text-xl font-bold">2. Description of Service</h2>
+              <p>FinancialFlow is a personal finance management tool designed to help users track their income, expenses, and financial goals. This service is provided for personal use only and should not be used for professional financial advice.</p>
+
+              <h2 className="text-xl font-bold">3. User Responsibilities</h2>
+              <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.</p>
+
+              <h2 className="text-xl font-bold">4. Intellectual Property</h2>
+              <p>FinancialFlow is the sole property of Sunny Jayendra Patel. The service, including its original content, features, and functionality, is protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
+
+              <h2 className="text-xl font-bold">5. Prohibited Uses</h2>
+              <p>You agree not to use FinancialFlow:</p>
+              <ul className="list-disc list-inside">
+                <li>For any unlawful purpose or to solicit the performance of any illegal activity</li>
+                <li>To harass, abuse, or harm another person</li>
+                <li>To impersonate or attempt to impersonate the author, another user, or any other person or entity</li>
+                <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
+              </ul>
+
+              <h2 className="text-xl font-bold">6. Disclaimer</h2>
+              <p>FinancialFlow is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+
+              <h2 className="text-xl font-bold">7. Limitation of Liability</h2>
+              <p>In no event shall the author be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
+
+              <h2 className="text-xl font-bold">8. Changes to Terms</h2>
+              <p>The author reserves the right, at his sole discretion, to modify or replace these Terms at any time. It is your responsibility to check these Terms periodically for changes.</p>
+
+              <h2 className="text-xl font-bold">9. Contact Information</h2>
+              <p>If you have any questions about these Terms, please contact Sunny Jayendra Patel at sunnypatel124555@gmail.com.</p>
+
+              <h2 className="text-xl font-bold">10. Copyright Notice</h2>
+              <p>This web project is protected by copyright. You may not copy, modify, or distribute this work without explicit permission from the author, Sunny Jayendra Patel. Any unauthorized use, reproduction, or distribution of this work may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under the law.</p>
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button onClick={() => setShowTosDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
