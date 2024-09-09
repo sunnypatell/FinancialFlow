@@ -28,7 +28,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -111,7 +112,7 @@ export default function FinanceTracker() {
   const [debt, setDebt] = useState(0)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
-  const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', type: 'expense' as 'income' | 'expense', category: '' })
+  const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', type: 'expense' as 'income' | 'expense', category: '', date: new Date().toISOString().split('T')[0] })
   const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '', deadline: '' })
   const [showQuestionnaire, setShowQuestionnaire] = useState(true)
   const [userData, setUserData] = useState<UserData>({ name: '', initialBalance: '', monthlyIncome: '', monthlyExpenses: '' })
@@ -119,6 +120,7 @@ export default function FinanceTracker() {
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([])
   const [newBudgetCategory, setNewBudgetCategory] = useState({ category: '', limit: '' })
   const [financialHealthScore, setFinancialHealthScore] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -213,7 +215,7 @@ export default function FinanceTracker() {
       const amount = newTransaction.type === 'income' ? parseFloat(newTransaction.amount) : -parseFloat(newTransaction.amount)
       const transaction: Transaction = {
         id: transactions.length + 1,
-        date: new Date().toISOString().split('T')[0],
+        date: newTransaction.date,
         description: newTransaction.description,
         amount,
         type: newTransaction.type,
@@ -222,7 +224,7 @@ export default function FinanceTracker() {
       const updatedTransactions = [transaction, ...transactions]
       setTransactions(updatedTransactions)
       updateFinances(amount)
-      setNewTransaction({ description: '', amount: '', type: 'expense', category: '' })
+      setNewTransaction({ description: '', amount: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
       saveData()
       toast({
         description: 'Transaction added successfully',
@@ -395,9 +397,7 @@ export default function FinanceTracker() {
     ],
   }
 
-  const doughnutChartData =
-
- {
+  const doughnutChartData = {
     labels: ['Savings', 'Expenses', 'Debt'],
     datasets: [
       {
@@ -431,6 +431,23 @@ export default function FinanceTracker() {
         pointHoverBorderColor: 'rgb(75, 192, 192)',
       },
     ],
+  }
+
+  const resetAllData = () => {
+    localStorage.removeItem('financeTrackerData')
+    setBalance(0)
+    setIncome(0)
+    setExpenses(0)
+    setSavings(0)
+    setDebt(0)
+    setTransactions([])
+    setGoals([])
+    setBudgetCategories([])
+    setUserData({ name: '', initialBalance: '', monthlyIncome: '', monthlyExpenses: '' })
+    setShowQuestionnaire(true)
+    toast({
+      description: 'All data has been reset. Please enter your initial information.',
+    })
   }
 
   return (
@@ -511,6 +528,9 @@ export default function FinanceTracker() {
               <Button variant="ghost" onClick={() => setActiveTab('insights')}>Insights</Button>
             </div>
             <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+                <Settings className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </nav>
@@ -607,7 +627,25 @@ export default function FinanceTracker() {
                   <CardTitle>Financial Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Doughnut data={doughnutChartData} options={{ responsive: true }} />
+                  <Doughnut 
+                    data={doughnutChartData} 
+                    options={{ 
+                      responsive: true,
+                      plugins: {
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              const label = context.label || '';
+                              const value = context.raw as number;
+                              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                              const percentage = ((value / total) * 100).toFixed(1);
+                              return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+                            }
+                          }
+                        }
+                      }
+                    }} 
+                  />
                 </CardContent>
               </Card>
               <Card>
@@ -651,7 +689,7 @@ export default function FinanceTracker() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 mb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
                     <Input
                       placeholder="Description"
                       value={newTransaction.description}
@@ -688,6 +726,11 @@ export default function FinanceTracker() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <Input
+                      type="date"
+                      value={newTransaction.date}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
+                    />
                     <Button onClick={addTransaction}>Add Transaction</Button>
                   </div>
                 </div>
@@ -971,6 +1014,84 @@ export default function FinanceTracker() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
+            <DialogDescription>Update your personal information and preferences</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={userData.name}
+                onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="monthlyIncome" className="text-right">
+                Monthly Income
+              </Label>
+              <Input
+                id="monthlyIncome"
+                value={userData.monthlyIncome}
+                onChange={(e) => setUserData({ ...userData, monthlyIncome: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="monthlyExpenses" className="text-right">
+                Monthly Expenses
+              </Label>
+              <Input
+                id="monthlyExpenses"
+                value={userData.monthlyExpenses}
+                onChange={(e) => setUserData({ ...userData, monthlyExpenses: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSettings(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              saveData();
+              setShowSettings(false);
+              toast({
+                description: "Settings updated successfully",
+              });
+            }}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="fixed bottom-4 right-4">
+            Reset All Data
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete all your financial data and reset the application to its initial state.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {}}>Cancel</Button>
+            <Button variant="destructive" onClick={resetAllData}>Yes, Reset All Data</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Toaster />
     </div>
