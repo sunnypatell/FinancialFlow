@@ -1090,6 +1090,9 @@ export default function FinanceTracker() {
               <Button variant="link" className="mt-4 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105" onClick={() => setShowTosDialog(true)}>
                 Terms of Service ⚠️
               </Button>
+              <Button variant="link" className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 z-50" onClick={() => setShowResetDialog(true)}>
+                Reset All Data ⚠️
+              </Button>
             </div>
             <div className="w-full md:w-1/3 text-center md:text-right mt-4 md:mt-0">
               <div className="flex justify-center md:justify-end space-x-4">
@@ -1233,15 +1236,6 @@ export default function FinanceTracker() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Button 
-        variant="outline" 
-        className="fixed bottom-4 right-4"
-        onClick={() => setShowResetDialog(true)}
-      >
-        Reset All Data
-      </Button>
-
       <Toaster />
     </div>
   )
