@@ -15,9 +15,7 @@ import {
   BarElement, 
   ArcElement,
   RadialLinearScale,
-  Filler,
-  ChartData,
-  ChartOptions
+  Filler
 } from 'chart.js'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -1201,7 +1199,7 @@ export default function FinanceTracker() {
               <p>FinancialFlow is a personal finance management tool designed to help users track their income, expenses, and financial goals. This service is provided for personal use only and should not be used for professional financial advice.</p>
 
               <h2 className="text-xl font-bold">3. User Responsibilities</h2>
-              <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.</p>
+              <p>You are responsible for maintaining the confidentiality financial information. You agree to accept responsibility for all activities that occur under your account.</p>
 
               <h2 className="text-xl font-bold">4. Intellectual Property</h2>
               <p>FinancialFlow is the sole property of Sunny Jayendra Patel. The service, including its original content, features, and functionality, is protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
@@ -1212,11 +1210,11 @@ export default function FinanceTracker() {
                 <li>For any unlawful purpose or to solicit the performance of any illegal activity</li>
                 <li>To harass, abuse, or harm another person</li>
                 <li>To impersonate or attempt to impersonate the author, another user, or any other person or entity</li>
-                <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
+                <li>To engage in any other conduct that restricts or inhibits anyone&apos;s use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
               </ul>
 
               <h2 className="text-xl font-bold">6. Disclaimer</h2>
-              <p>FinancialFlow is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+              <p>FinancialFlow is provided on an &quot;as is&quot; and &quot;as available&quot; basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
 
               <h2 className="text-xl font-bold">7. Limitation of Liability</h2>
               <p>In no event shall the author be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
