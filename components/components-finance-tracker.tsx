@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Line, Bar, Doughnut, Radar, PolarArea } from 'react-chartjs-2'
+import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, Search } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -76,6 +76,12 @@ interface BudgetCategory {
   limit: number
 }
 
+interface Recommendation {
+  icon: React.ReactNode
+  title: string
+  description: string
+}
+
 const categories = [
   'Food', 'Transport', 'Entertainment', 'Utilities', 'Rent', 'Shopping', 'Health', 'Education', 'Savings', 'Other'
 ]
@@ -106,7 +112,51 @@ const calculateFinancialHealth = (income: number, expenses: number, savings: num
   return Math.min(Math.max(score * 100, 0), 100) // Ensure score is between 0 and 100
 }
 
-export default function Component() {
+const generateBudgetRecommendations = (savingsRate: number, emergencyFund: number, expenseToIncomeRatio: number): Recommendation[] => {
+  const recommendations: Recommendation[] = []
+
+  if (savingsRate >= 20) {
+    recommendations.push({
+      icon: <PiggyBank className="h-8 w-8 text-green-500" />,
+      title: "Savings Superstar",
+      description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
+    })
+  } else {
+    recommendations.push({
+      icon: <Target className="h-8 w-8 text-blue-500" />,
+      title: "Savings Boost Needed",
+      description: `You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`
+    })
+  }
+
+  if (emergencyFund < 3) {
+    recommendations.push({
+      icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
+      title: "Emergency Fund Alert",
+      description: `Your current emergency fund covers ${emergencyFund.toFixed(1)} months of expenses. Aim for at least 3-6 months. Start small by setting aside a fixed amount each month specifically for emergencies.`
+    })
+  }
+
+  if (expenseToIncomeRatio > 0.7) {
+    recommendations.push({
+      icon: <TrendingUp className="h-8 w-8 text-red-500" />,
+      title: "Income-Expense Gap",
+      description: `Your expenses are ${(expenseToIncomeRatio * 100).toFixed(1)}% of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
+    })
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push({
+      icon: <DollarSign className="h-8 w-8 text-green-500" />,
+      title: "Financial Health Check",
+      description: "Great job managing your finances! Keep monitoring your budget and look for ways to optimize your spending and savings."
+    })
+  }
+
+  return recommendations
+}
+
+export default function FinanceTracker() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [chequingBalance, setChequingBalance] = useState(0)
   const [savingsBalance, setSavingsBalance] = useState(0)
@@ -128,8 +178,6 @@ export default function Component() {
   const [showTosDialog, setShowTosDialog] = useState(false)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const { toast } = useToast()
-
-  const chartRef = useRef<ChartJS<"doughnut", number[], unknown> | null>(null)
 
   useEffect(() => {
     const storedData = localStorage.getItem('financeTrackerData')
@@ -351,7 +399,7 @@ export default function Component() {
     }
   }
 
-  const deleteGoal = (id: number) =>  {
+  const deleteGoal = (id: number) => {
     const updatedGoals = goals.filter(g => g.id !== id)
     setGoals(updatedGoals)
     saveData()
@@ -390,82 +438,6 @@ export default function Component() {
       }
     })
   }
-
-  const generateBudgetRecommendations = () => {
-    const recommendations = [];
-    const totalIncome = income;
-    const totalExpenses = expenses;
-    const savingsRate = totalIncome > 0 ? (savingsBalance / totalIncome) * 100 : 0;
-    const budgetComparisonData = getBudgetComparisonData();
-
-    const highestExpenseCategory = budgetComparisonData.length > 0
-      ? budgetComparisonData.reduce((prev, current) => (prev.spent > current.spent) ? prev : current)
-      : null;
-
-    // Savings Rate Recommendation
-    if (savingsRate < 20) {
-      recommendations.push({
-        icon: <Target className="h-6 w-6" />,
-        title: "Savings Boost Needed",
-        description: `You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`
-      });
-    } else {
-      recommendations.push({
-        icon: <Target className="h-6 w-6" />,
-        title: "Savings Superstar",
-        description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
-      });
-    }
-
-    // Emergency Fund
-    const emergencyFundTarget = totalExpenses * 3;
-    if (savingsBalance < emergencyFundTarget) {
-      recommendations.push({
-        icon: <AlertTriangle className="h-6 w-6" />,
-        title: "Emergency Fund Alert",
-        description: `Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`
-      });
-    }
-
-    // Income vs Expenses
-    if (totalExpenses / totalIncome > 0.7) {
-      recommendations.push({
-        icon: <Search className="h-6 w-6" />,
-        title: "Income-Expense Gap",
-        description: `Your expenses are taking up a large portion of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
-      });
-    }
-
-    return recommendations;
-  };
-
-  const getFinancialBreakdownData = () => {
-    const totalAssets = chequingBalance + savingsBalance;
-    const totalLiabilities = debt;
-    const netWorth = totalAssets - totalLiabilities;
-
-    return {
-      labels: ['Chequing', 'Savings', 'Debt', 'Net Worth'],
-      datasets: [
-        {
-          data: [chequingBalance, savingsBalance, debt, netWorth],
-          backgroundColor: [
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-          ],
-          borderColor: [
-            'rgba(75, 192, 192, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(255, 99, 132, 1)',
-            'rgba(153, 102, 255, 1)',
-          ],
-          borderWidth: 1,
-        },
-      ],
-    };
-  };
 
   const getSpendingTrendsData = () => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -573,6 +545,26 @@ export default function Component() {
           'rgba(40, 159, 64, 0.6)',
           'rgba(206, 102, 255, 0.6)',
         ],
+      },
+    ],
+  }
+
+  const doughnutChartData = {
+    labels: ['Chequing', 'Savings', 'Debt'],
+    datasets: [
+      {
+        data: [chequingBalance, savingsBalance, debt],
+        backgroundColor: [
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+        ],
+        borderColor: [
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(255, 99, 132, 1)',
+        ],
+        borderWidth: 1,
       },
     ],
   }
@@ -862,8 +854,8 @@ export default function Component() {
                   <CardTitle>Financial Overview</CardTitle>
                 </CardHeader>
                 <CardContent className="relative">
-                  <PolarArea
-                    data={getFinancialBreakdownData()}
+                  <Doughnut
+                    data={doughnutChartData}
                     options={{
                       responsive: true,
                       plugins: {
@@ -885,10 +877,10 @@ export default function Component() {
                       onClick: (event, elements) => {
                         if (elements && elements.length > 0) {
                           const clickedElement = elements[0];
-                          const label = getFinancialBreakdownData().labels[clickedElement.index];
+                          const label = doughnutChartData.labels[clickedElement.index];
                           toast({
                             title: `${label} Details`,
-                            description: `Balance: ${formatCurrency(getFinancialBreakdownData().datasets[0].data[clickedElement.index])}`,
+                            description: `Balance: ${formatCurrency(doughnutChartData.datasets[0].data[clickedElement.index])}`,
                           });
                         }
                       },
@@ -896,7 +888,7 @@ export default function Component() {
                         const chartElement = event.native?.target as HTMLElement;
                         if (elements && elements.length) {
                           chartElement.style.cursor = 'pointer';
-                          setHoveredSection(getFinancialBreakdownData().labels[elements[0].index] as string);
+                          setHoveredSection(doughnutChartData.labels[elements[0].index] as string);
                         } else {
                           chartElement.style.cursor = 'default';
                           setHoveredSection(null);
@@ -908,7 +900,6 @@ export default function Component() {
                     {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
                     {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
                     {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
-                    {hoveredSection === 'Net Worth' && <DollarSign className="h-12 w-12 text-purple-500" />}
                     {!hoveredSection && <DollarSign className="h-12 w-12 text-gray-400" />}
                   </div>
                 </CardContent>
@@ -960,7 +951,11 @@ export default function Component() {
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[300px]">
-                    {generateBudgetRecommendations().map((recommendation, index) => (
+                    {generateBudgetRecommendations(
+                      income > 0 ? (savingsBalance / income) * 100 : 0,
+                      expenses > 0 ? savingsBalance / expenses : 0,
+                      income > 0 ? expenses / income : 0
+                    ).map((recommendation, index) => (
                       <div key={index} className="flex items-start space-x-4 mb-4 bg-gray-800 p-4 rounded-lg">
                         <div className="flex-shrink-0 mt-1">
                           {recommendation.icon}
