@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
+import { Line, Bar, Doughnut, Radar, PolarArea } from 'react-chartjs-2'
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, Search } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -106,7 +106,7 @@ const calculateFinancialHealth = (income: number, expenses: number, savings: num
   return Math.min(Math.max(score * 100, 0), 100) // Ensure score is between 0 and 100
 }
 
-export default function FinanceTracker() {
+export default function Component() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [chequingBalance, setChequingBalance] = useState(0)
   const [savingsBalance, setSavingsBalance] = useState(0)
@@ -135,16 +135,7 @@ export default function FinanceTracker() {
     const storedData = localStorage.getItem('financeTrackerData')
     if (storedData) {
       const parsedData = JSON.parse(storedData)
-      setChequingBalance(parsedData.chequingBalance)
-      setSavingsBalance(parsedData.savingsBalance)
-      setIncome(parsedData.income)
-      setExpenses(parsedData.expenses)
-      setDebt(parsedData.debt)
-      setTransactions(parsedData.transactions)
-      setGoals(parsedData.goals)
-      setBudgetCategories(parsedData.budgetCategories)
-      setUserData(parsedData.userData)
-      setShowQuestionnaire(false)
+      updateAllData(parsedData)
     }
   }, [])
 
@@ -152,6 +143,25 @@ export default function FinanceTracker() {
     const score = calculateFinancialHealth(income, expenses, savingsBalance, debt)
     setFinancialHealthScore(score)
   }, [income, expenses, savingsBalance, debt])
+
+  const updateAllData = (data: any) => {
+    setChequingBalance(data.chequingBalance || 0)
+    setSavingsBalance(data.savingsBalance || 0)
+    setIncome(data.income || 0)
+    setExpenses(data.expenses || 0)
+    setDebt(data.debt || 0)
+    setTransactions(data.transactions || [])
+    setGoals(data.goals || [])
+    setBudgetCategories(data.budgetCategories || [])
+    setUserData({
+      name: data.userData?.name || '',
+      chequingBalance: data.userData?.chequingBalance || '0',
+      savingsBalance: data.userData?.savingsBalance || '0',
+      monthlyIncome: data.userData?.monthlyIncome || '0',
+      monthlyExpenses: data.userData?.monthlyExpenses || '0'
+    })
+    setShowQuestionnaire(false)
+  }
 
   const saveData = () => {
     const dataToSave = {
@@ -290,6 +300,16 @@ export default function FinanceTracker() {
     } else {
       setExpenses(prevExpenses => prevExpenses - amount)
     }
+    updateGoalProgress(amount)
+  }
+
+  const updateGoalProgress = (amount: number) => {
+    setGoals(prevGoals => 
+      prevGoals.map(goal => ({
+        ...goal,
+        current: goal.current + (amount > 0 ? amount : 0)
+      }))
+    )
   }
 
   const addBudgetCategory = () => {
@@ -331,7 +351,7 @@ export default function FinanceTracker() {
     }
   }
 
-  const deleteGoal = (id: number) => {
+  const deleteGoal = (id: number) =>  {
     const updatedGoals = goals.filter(g => g.id !== id)
     setGoals(updatedGoals)
     saveData()
@@ -384,50 +404,67 @@ export default function FinanceTracker() {
 
     // Savings Rate Recommendation
     if (savingsRate < 20) {
-      recommendations.push(`🎯 Savings Boost Needed: You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`);
+      recommendations.push({
+        icon: <Target className="h-6 w-6" />,
+        title: "Savings Boost Needed",
+        description: `You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`
+      });
     } else {
-      recommendations.push(`🌟 Savings Superstar: Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`);
-    }
-
-    // Highest Expense Category
-    if (highestExpenseCategory) {
-      recommendations.push(`💡 Expense Spotlight: Your highest spending category is ${highestExpenseCategory.category}. Here are some tips to trim it down:
-      • Shop around for better deals
-      • Look for discounts or coupons
-      • Consider if you can reduce usage or find alternatives
-      • Negotiate better rates with service providers`);
+      recommendations.push({
+        icon: <Target className="h-6 w-6" />,
+        title: "Savings Superstar",
+        description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
+      });
     }
 
     // Emergency Fund
     const emergencyFundTarget = totalExpenses * 3;
     if (savingsBalance < emergencyFundTarget) {
-      recommendations.push(`🚨 Emergency Fund Alert: Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`);
-    } else {
-      recommendations.push(`🛡️ Emergency Fund Champion: Great job on your emergency fund! You've got ${formatCurrency(savingsBalance)} saved up, which covers more than 3 months of expenses. Consider investing any excess for long-term growth.`);
-    }
-
-    // Debt Management
-    if (debt > 0) {
-      const debtToIncomeRatio = (debt / totalIncome) * 100;
-      if (debtToIncomeRatio > 36) {
-        recommendations.push(`⚖️ Debt Reduction Mission: Your debt-to-income ratio is ${debtToIncomeRatio.toFixed(1)}%, which is on the high side. Focus on paying down high-interest debt first. Consider the debt avalanche or debt snowball method to accelerate your progress.`);
-      } else {
-        recommendations.push(`📉 Debt Management Pro: Your debt-to-income ratio of ${debtToIncomeRatio.toFixed(1)}% is in a healthy range. Keep chipping away at your debt while maintaining your other financial goals.`);
-      }
+      recommendations.push({
+        icon: <AlertTriangle className="h-6 w-6" />,
+        title: "Emergency Fund Alert",
+        description: `Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`
+      });
     }
 
     // Income vs Expenses
     if (totalExpenses / totalIncome > 0.7) {
-      recommendations.push(`🔍 Income-Expense Gap: Your expenses are taking up a large portion of your income. Here are some ideas to widen the gap:
-      • Look for ways to increase your income (side gig, freelance work, asking for a raise)
-      • Review and cut unnecessary subscriptions
-      • Meal prep to reduce food costs
-      • Use public transport or carpool to save on commuting`);
-    } else {
-      recommendations.push(`🌈 Healthy Financial Balance: You're doing a great job keeping your expenses in check relative to your income. This gives you more flexibility to save, invest, and pursue your financial goals.`);
+      recommendations.push({
+        icon: <Search className="h-6 w-6" />,
+        title: "Income-Expense Gap",
+        description: `Your expenses are taking up a large portion of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
+      });
     }
 
     return recommendations;
+  };
+
+  const getFinancialBreakdownData = () => {
+    const totalAssets = chequingBalance + savingsBalance;
+    const totalLiabilities = debt;
+    const netWorth = totalAssets - totalLiabilities;
+
+    return {
+      labels: ['Chequing', 'Savings', 'Debt', 'Net Worth'],
+      datasets: [
+        {
+          data: [chequingBalance, savingsBalance, debt, netWorth],
+          backgroundColor: [
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+          ],
+          borderColor: [
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(153, 102, 255, 1)',
+          ],
+          borderWidth: 1,
+        },
+      ],
+    };
   };
 
   const getSpendingTrendsData = () => {
@@ -460,12 +497,58 @@ export default function FinanceTracker() {
           label: 'Income',
           data: incomeData,
           borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
           tension: 0.1,
         },
         {
           label: 'Expenses',
           data: expenseData,
           borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
+          tension: 0.1,
+        },
+      ],
+    };
+  }
+
+  const getDetailedSpendingTrendsData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentDate = new Date();
+    const labels = Array.from({length: 12}, (_, i) => {
+      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 11 + i, 1);
+      return monthNames[d.getMonth()];
+    });
+
+    const incomeData = Array(12).fill(0);
+    const expenseData = Array(12).fill(0);
+
+    transactions.forEach(transaction => {
+      const transactionDate = new Date(transaction.date);
+      const monthIndex = currentDate.getMonth() - 11 + transactionDate.getMonth();
+      if (monthIndex >= 0 && monthIndex < 12) {
+        if (transaction.type === 'income') {
+          incomeData[monthIndex] += transaction.amount;
+        } else {
+          expenseData[monthIndex] += Math.abs(transaction.amount);
+        }
+      }
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Income',
+          data: incomeData,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          tension: 0.1,
+        },
+        {
+          label: 'Expenses',
+          data: expenseData,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)',
           tension: 0.1,
         },
       ],
@@ -490,26 +573,6 @@ export default function FinanceTracker() {
           'rgba(40, 159, 64, 0.6)',
           'rgba(206, 102, 255, 0.6)',
         ],
-      },
-    ],
-  }
-
-  const doughnutChartData = {
-    labels: ['Chequing', 'Savings', 'Debt'],
-    datasets: [
-      {
-        data: [chequingBalance, savingsBalance, debt],
-        backgroundColor: [
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
-        ],
-        borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(255, 99, 132, 1)',
-        ],
-        borderWidth: 1,
       },
     ],
   }
@@ -612,15 +675,7 @@ export default function FinanceTracker() {
       reader.onload = (e) => {
         try {
           const importedData = JSON.parse(e.target?.result as string)
-          setChequingBalance(importedData.chequingBalance)
-          setSavingsBalance(importedData.savingsBalance)
-          setIncome(importedData.income)
-          setExpenses(importedData.expenses)
-          setDebt(importedData.debt)
-          setTransactions(importedData.transactions)
-          setGoals(importedData.goals)
-          setBudgetCategories(importedData.budgetCategories)
-          setUserData(importedData.userData)
+          updateAllData(importedData)
           saveData()
           toast({
             description: "Data imported successfully",
@@ -804,27 +859,11 @@ export default function FinanceTracker() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Income vs Expenses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Expenses by Category</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Bar data={barChartData} options={{ responsive: true }} />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
                   <CardTitle>Financial Overview</CardTitle>
                 </CardHeader>
                 <CardContent className="relative">
-                  <Doughnut
-                    data={doughnutChartData}
+                  <PolarArea
+                    data={getFinancialBreakdownData()}
                     options={{
                       responsive: true,
                       plugins: {
@@ -846,10 +885,10 @@ export default function FinanceTracker() {
                       onClick: (event, elements) => {
                         if (elements && elements.length > 0) {
                           const clickedElement = elements[0];
-                          const label = doughnutChartData.labels[clickedElement.index];
+                          const label = getFinancialBreakdownData().labels[clickedElement.index];
                           toast({
                             title: `${label} Details`,
-                            description: `Balance: ${formatCurrency(doughnutChartData.datasets[0].data[clickedElement.index])}`,
+                            description: `Balance: ${formatCurrency(getFinancialBreakdownData().datasets[0].data[clickedElement.index])}`,
                           });
                         }
                       },
@@ -857,7 +896,7 @@ export default function FinanceTracker() {
                         const chartElement = event.native?.target as HTMLElement;
                         if (elements && elements.length) {
                           chartElement.style.cursor = 'pointer';
-                          setHoveredSection(doughnutChartData.labels[elements[0].index] as string);
+                          setHoveredSection(getFinancialBreakdownData().labels[elements[0].index] as string);
                         } else {
                           chartElement.style.cursor = 'default';
                           setHoveredSection(null);
@@ -869,6 +908,7 @@ export default function FinanceTracker() {
                     {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
                     {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
                     {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
+                    {hoveredSection === 'Net Worth' && <DollarSign className="h-12 w-12 text-purple-500" />}
                     {!hoveredSection && <DollarSign className="h-12 w-12 text-gray-400" />}
                   </div>
                 </CardContent>
@@ -903,6 +943,34 @@ export default function FinanceTracker() {
                         ))}
                       </TableBody>
                     </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Spending Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Budget Recommendations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px]">
+                    {generateBudgetRecommendations().map((recommendation, index) => (
+                      <div key={index} className="flex items-start space-x-4 mb-4 bg-gray-800 p-4 rounded-lg">
+                        <div className="flex-shrink-0 mt-1">
+                          {recommendation.icon}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">{recommendation.title}</h3>
+                          <p className="text-sm text-gray-300">{recommendation.description}</p>
+                        </div>
+                      </div>
+                    ))}
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -1042,7 +1110,7 @@ export default function FinanceTracker() {
                       value={newGoal.deadline}
                       onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
                     />
-                    <Button onClick={addGoal}>Ad Goal</Button>
+                    <Button onClick={addGoal}>Add Goal</Button>
                   </div>
                 </div>
                 <ScrollArea className="h-[400px]">
@@ -1156,27 +1224,18 @@ export default function FinanceTracker() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Spending Trends</CardTitle>
+                  <CardTitle>Spending Trends (12 Months)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
+                  <Line data={getDetailedSpendingTrendsData()} options={{ responsive: true }} />
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Budget Recommendations</CardTitle>
+                  <CardTitle>Expenses by Category</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px]">
-                    <ul className="space-y-6 text-lg">
-                      {generateBudgetRecommendations().map((recommendation, index) => (
-                        <li key={index} className="flex items-start bg-gray-800 rounded-lg p-4 shadow-md">
-                          <span className="mr-4 text-2xl">{recommendation.split(':')[0]}</span>
-                          <span>{recommendation.split(':')[1]}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </ScrollArea>
+                  <Bar data={barChartData} options={{ responsive: true }} />
                 </CardContent>
               </Card>
               <Card>
