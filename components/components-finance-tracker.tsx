@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Download, Upload, Target, AlertTriangle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -99,6 +99,26 @@ interface Cryptocurrency {
   currentPrice: number
 }
 
+interface FinancialData {
+  chequingBalance?: number;
+  savingsBalance?: number;
+  income?: number;
+  expenses?: number;
+  transactions?: Transaction[];
+  goals?: Goal[];
+  budgetCategories?: BudgetCategory[];
+  investments?: Investment[];
+  cryptocurrencies?: Cryptocurrency[];
+  userData?: {
+    name?: string;
+    chequingBalance?: string;
+    savingsBalance?: string;
+    monthlyIncome?: string;
+    monthlyExpenses?: string;
+  };
+  financialHealthScore?: number;
+}
+
 const categories = [
   'Food', 'Transport', 'Entertainment', 'Utilities', 'Rent', 'Shopping', 'Health', 'Education', 'Savings', 'Other'
 ]
@@ -150,7 +170,6 @@ export default function FinanceTracker() {
   const [showSettings, setShowSettings] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [showTosDialog, setShowTosDialog] = useState(false)
-  const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const { toast } = useToast()
 
   // New state for investments and cryptocurrencies
@@ -190,24 +209,24 @@ export default function FinanceTracker() {
     setFinancialHealthScore(score)
   }, [income, expenses, savingsBalance, chequingBalance, investments, cryptocurrencies])
 
-  const updateAllData = (data: any) => {
-    setChequingBalance(data.chequingBalance || 0)
-    setSavingsBalance(data.savingsBalance || 0)
-    setIncome(data.income || 0)
-    setExpenses(data.expenses || 0)
-    setTransactions(data.transactions || [])
-    setGoals(data.goals || [])
-    setBudgetCategories(data.budgetCategories || [])
-    setInvestments(data.investments || [])
-    setCryptocurrencies(data.cryptocurrencies || [])
+  const updateAllData = (data: FinancialData) => {
+    setChequingBalance(data.chequingBalance ?? 0)
+    setSavingsBalance(data.savingsBalance ?? 0)
+    setIncome(data.income ?? 0)
+    setExpenses(data.expenses ?? 0)
+    setTransactions(data.transactions ?? [])
+    setGoals(data.goals ?? [])
+    setBudgetCategories(data.budgetCategories ?? [])
+    setInvestments(data.investments ?? [])
+    setCryptocurrencies(data.cryptocurrencies ?? [])
     setUserData({
-      name: data.userData?.name || '',
-      chequingBalance: data.userData?.chequingBalance || '0',
-      savingsBalance: data.userData?.savingsBalance || '0',
-      monthlyIncome: data.userData?.monthlyIncome || '0',
-      monthlyExpenses: data.userData?.monthlyExpenses || '0'
+      name: data.userData?.name ?? '',
+      chequingBalance: data.userData?.chequingBalance ?? '0',
+      savingsBalance: data.userData?.savingsBalance ?? '0',
+      monthlyIncome: data.userData?.monthlyIncome ?? '0',
+      monthlyExpenses: data.userData?.monthlyExpenses ?? '0'
     })
-    setFinancialHealthScore(data.financialHealthScore || 0)
+    setFinancialHealthScore(data.financialHealthScore ?? 0)
     setShowQuestionnaire(false)
   }
 
@@ -447,7 +466,7 @@ export default function FinanceTracker() {
     const totalExpenses = expenses
     const savingsRate = totalIncome > 0 ? (savingsBalance / totalIncome) * 100 : 0
     const emergencyFundTarget = totalExpenses * 3
-  
+
     if (savingsRate < 20) {
       recommendations.push({
         icon: <Target className="h-6 w-6 text-blue-500" />,
@@ -461,7 +480,7 @@ export default function FinanceTracker() {
         description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
       })
     }
-  
+
     if (savingsBalance < emergencyFundTarget) {
       recommendations.push({
         icon: <AlertTriangle className="h-6 w-6 text-yellow-500" />,
@@ -469,7 +488,7 @@ export default function FinanceTracker() {
         description: `Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`
       })
     }
-  
+
     if (totalExpenses / totalIncome > 0.7) {
       recommendations.push({
         icon: <TrendingUp className="h-6 w-6 text-red-500" />,
@@ -477,7 +496,7 @@ export default function FinanceTracker() {
         description: `Your expenses are taking up ${((totalExpenses / totalIncome) * 100).toFixed(1)}% of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
       })
     }
-  
+
     return recommendations
   }
 
@@ -485,7 +504,7 @@ export default function FinanceTracker() {
     const totalAssets = chequingBalance + savingsBalance
     const debt = Math.max(0, -chequingBalance) // Consider negative chequing balance as debt
     const netWorth = totalAssets - debt
-  
+
     return {
       labels: ['Chequing', 'Savings', 'Debt', 'Net Worth'],
       datasets: [
@@ -1065,11 +1084,7 @@ export default function FinanceTracker() {
                     }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
-                    {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
-                    {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
-                    {hoveredSection === 'Net Worth' && <DollarSign className="h-12 w-12 text-purple-500" />}
-                    {!hoveredSection && <DollarSign className="h-12 w-12 text-gray-400" />}
+                    <DollarSign className="h-12 w-12 text-gray-400" />
                   </div>
                 </CardContent>
               </Card>
@@ -1595,7 +1610,7 @@ export default function FinanceTracker() {
                   <div className="mt-6 text-lg space-y-4">
                     {financialHealthScore >= 80 && (
                       <>
-                        <p>🏆 Congratulations on your excellent financial health! You're a true money maestro.</p>
+                        <p>🏆 Congratulations on your excellent financial health! You&apos;re a true money maestro.</p>
                         <p>💰 Your smart decisions have paid off, creating a solid foundation for your future.</p>
                         <p>🚀 Next steps:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
@@ -1605,13 +1620,13 @@ export default function FinanceTracker() {
                           <li>Consider setting more ambitious financial goals, like early retirement or starting a passion project</li>
                           <li>Think about mentoring others or contributing to charitable causes you care about</li>
                         </ul>
-                        <p>Remember, even at the top, there's always room for growth! 🌟</p>
+                        <p>Remember, even at the top, there&apos;s always room for growth! 🌟</p>
                       </>
                     )}
                     {financialHealthScore >= 60 && financialHealthScore < 80 && (
                       <>
-                        <p>👍 Good job on maintaining a healthy financial status! You're on the right track.</p>
-                        <p>📈 There's potential for even greater success. Here's how to level up:</p>
+                        <p>👍 Good job on maintaining a healthy financial status! You&apos;re on the right track.</p>
+                        <p>📈 There's potential for even greater success. Here&apos;s how to level up:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
                           <li>Fine-tune your budget to increase your savings rate</li>
                           <li>Look for areas to trim unnecessary expenses without sacrificing quality of life</li>
@@ -1625,7 +1640,7 @@ export default function FinanceTracker() {
                     {financialHealthScore >= 40 && financialHealthScore < 60 && (
                       <>
                         <p>⚖️ Your financial health is fair, which means you have a solid foundation to build upon.</p>
-                        <p>🛠️ It's time to roll up your sleeves and make some positive changes! Here's your action plan:</p>
+                        <p>🛠️ It's time to roll up your sleeves and make some positive changes! Here&apos;s your action plan:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
                           <li>Create a detailed budget to understand where every dollar is going</li>
                           <li>Prioritize paying down high-interest debt</li>
@@ -1633,16 +1648,16 @@ export default function FinanceTracker() {
                           <li>Look for ways to increase your income (side hustle, raise at work)</li>
                           <li>Educate yourself - consider taking financial literacy courses or reading personal finance books</li>
                         </ul>
-                        <p>Remember, small, consistent steps can lead to significant improvements over time. You've got this! 🌱</p>
+                        <p>Remember, small, consistent steps can lead to significant improvements over time. You&apos;ve got this! 🌱</p>
                       </>
                     )}
                     {financialHealthScore < 40 && (
                       <>
-                        <p>🚨 Your financial health needs some serious TLC, but don't worry – everyone starts somewhere!</p>
-                        <p>🏁 You've already taken the first step by acknowledging it. Here's your financial reset plan:</p>
+                        <p>🚨 Your financial health needs some serious TLC, but don&apos;t worry - everyone starts somewhere!</p>
+                        <p>🏁 You&apos;ve already taken the first step by acknowledging it. Here&apos;s your financial reset plan:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
                           <li>List all your debts and create a repayment plan, focusing on high-interest debts first</li>
-                          <li>Start an emergency fund, even if it's small at first</li>
+                          <li>Start an emergency fund, even if it&apos;s small at first</li>
                           <li>Track every expense for a month to understand your spending patterns</li>
                           <li>Look for immediate ways to reduce expenses and increase income</li>
                           <li>Seek free financial counseling if available in your area</li>
@@ -1854,7 +1869,7 @@ export default function FinanceTracker() {
               </ul>
 
               <h2 className="text-xl font-bold">6. Disclaimer</h2>
-              <p>FinancialFlow is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+              <p>FinancialFlow is provided on an &quot;as is&quot; and &quot;as available&quot; basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
 
               <h2 className="text-xl font-bold">7. Limitation of Liability</h2>
               <p>In no event shall the author be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
