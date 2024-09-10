@@ -382,51 +382,94 @@ export default function FinanceTracker() {
       ? budgetComparisonData.reduce((prev, current) => (prev.spent > current.spent) ? prev : current)
       : null;
 
+    // Savings Rate Recommendation
     if (savingsRate < 20) {
-      recommendations.push(`Aim to increase your savings rate to at least 20% of your income. Currently, you're saving ${savingsRate.toFixed(1)}%.`);
+      recommendations.push(`🎯 Savings Boost Needed: You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`);
     } else {
-      recommendations.push(`Great job on your savings! You're currently saving ${savingsRate.toFixed(1)}% of your income.`);
+      recommendations.push(`🌟 Savings Superstar: Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`);
     }
 
+    // Highest Expense Category
     if (highestExpenseCategory) {
-      recommendations.push(`Your highest expense category is ${highestExpenseCategory.category}. Look for ways to reduce spending in this area, such as finding cheaper alternatives or negotiating better rates.`);
+      recommendations.push(`💡 Expense Spotlight: Your highest spending category is ${highestExpenseCategory.category}. Here are some tips to trim it down:
+      • Shop around for better deals
+      • Look for discounts or coupons
+      • Consider if you can reduce usage or find alternatives
+      • Negotiate better rates with service providers`);
     }
 
+    // Emergency Fund
     const emergencyFundTarget = totalExpenses * 3;
     if (savingsBalance < emergencyFundTarget) {
-      recommendations.push(`Work on building an emergency fund of ${formatCurrency(emergencyFundTarget)}. This will cover 3 months of expenses.`);
+      recommendations.push(`🚨 Emergency Fund Alert: Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`);
+    } else {
+      recommendations.push(`🛡️ Emergency Fund Champion: Great job on your emergency fund! You've got ${formatCurrency(savingsBalance)} saved up, which covers more than 3 months of expenses. Consider investing any excess for long-term growth.`);
     }
 
+    // Debt Management
     if (debt > 0) {
       const debtToIncomeRatio = (debt / totalIncome) * 100;
       if (debtToIncomeRatio > 36) {
-        recommendations.push(`Your debt-to-income ratio is high at ${debtToIncomeRatio.toFixed(1)}%. Focus on paying down your debt, starting with high-interest loans.`);
+        recommendations.push(`⚖️ Debt Reduction Mission: Your debt-to-income ratio is ${debtToIncomeRatio.toFixed(1)}%, which is on the high side. Focus on paying down high-interest debt first. Consider the debt avalanche or debt snowball method to accelerate your progress.`);
+      } else {
+        recommendations.push(`📉 Debt Management Pro: Your debt-to-income ratio of ${debtToIncomeRatio.toFixed(1)}% is in a healthy range. Keep chipping away at your debt while maintaining your other financial goals.`);
       }
     }
 
+    // Income vs Expenses
     if (totalExpenses / totalIncome > 0.7) {
-      recommendations.push("Your expenses are taking up a large portion of your income. Consider ways to increase your income, such as asking for a raise, finding a side hustle, or developing new skills.");
+      recommendations.push(`🔍 Income-Expense Gap: Your expenses are taking up a large portion of your income. Here are some ideas to widen the gap:
+      • Look for ways to increase your income (side gig, freelance work, asking for a raise)
+      • Review and cut unnecessary subscriptions
+      • Meal prep to reduce food costs
+      • Use public transport or carpool to save on commuting`);
+    } else {
+      recommendations.push(`🌈 Healthy Financial Balance: You're doing a great job keeping your expenses in check relative to your income. This gives you more flexibility to save, invest, and pursue your financial goals.`);
     }
 
     return recommendations;
   };
 
-  const lineChartData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Income',
-        data: transactions.filter(t => t.type === 'income').map(t => t.amount),
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1,
-      },
-      {
-        label: 'Expenses',
-        data: transactions.filter(t => t.type === 'expense').map(t => Math.abs(t.amount)),
-        borderColor: 'rgb(255, 99, 132)',
-        tension: 0.1,
-      },
-    ],
+  const getSpendingTrendsData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentDate = new Date();
+    const labels = Array.from({length: 6}, (_, i) => {
+      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 5 + i, 1);
+      return monthNames[d.getMonth()];
+    });
+
+    const incomeData = Array(6).fill(0);
+    const expenseData = Array(6).fill(0);
+
+    transactions.forEach(transaction => {
+      const transactionDate = new Date(transaction.date);
+      const monthIndex = currentDate.getMonth() - 5 + transactionDate.getMonth();
+      if (monthIndex >= 0 && monthIndex < 6) {
+        if (transaction.type === 'income') {
+          incomeData[monthIndex] += transaction.amount;
+        } else {
+          expenseData[monthIndex] += Math.abs(transaction.amount);
+        }
+      }
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Income',
+          data: incomeData,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1,
+        },
+        {
+          label: 'Expenses',
+          data: expenseData,
+          borderColor: 'rgb(255, 99, 132)',
+          tension: 0.1,
+        },
+      ],
+    };
   }
 
   const barChartData = {
@@ -764,7 +807,7 @@ export default function FinanceTracker() {
                   <CardTitle>Income vs Expenses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Line data={lineChartData} options={{ responsive: true }} />
+                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
                 </CardContent>
               </Card>
               <Card>
@@ -800,17 +843,29 @@ export default function FinanceTracker() {
                           }
                         }
                       },
+                      onClick: (event, elements) => {
+                        if (elements && elements.length > 0) {
+                          const clickedElement = elements[0];
+                          const label = doughnutChartData.labels[clickedElement.index];
+                          toast({
+                            title: `${label} Details`,
+                            description: `Balance: ${formatCurrency(doughnutChartData.datasets[0].data[clickedElement.index])}`,
+                          });
+                        }
+                      },
                       onHover: (event, elements) => {
+                        const chartElement = event.native?.target as HTMLElement;
                         if (elements && elements.length) {
+                          chartElement.style.cursor = 'pointer';
                           setHoveredSection(doughnutChartData.labels[elements[0].index] as string);
                         } else {
+                          chartElement.style.cursor = 'default';
                           setHoveredSection(null);
                         }
-                      }
+                      },
                     }}
-                    ref={chartRef}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
                     {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
                     {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
@@ -987,7 +1042,7 @@ export default function FinanceTracker() {
                       value={newGoal.deadline}
                       onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
                     />
-                    <Button onClick={addGoal}>Add Goal</Button>
+                    <Button onClick={addGoal}>Ad Goal</Button>
                   </div>
                 </div>
                 <ScrollArea className="h-[400px]">
@@ -1104,7 +1159,7 @@ export default function FinanceTracker() {
                   <CardTitle>Spending Trends</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Line data={lineChartData} options={{ responsive: true }} />
+                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
                 </CardContent>
               </Card>
               <Card>
@@ -1112,14 +1167,16 @@ export default function FinanceTracker() {
                   <CardTitle>Budget Recommendations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-4 text-lg">
-                    {generateBudgetRecommendations().map((recommendation, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="mr-2 mt-1">💡</span>
-                        <span>{recommendation}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <ScrollArea className="h-[400px]">
+                    <ul className="space-y-6 text-lg">
+                      {generateBudgetRecommendations().map((recommendation, index) => (
+                        <li key={index} className="flex items-start bg-gray-800 rounded-lg p-4 shadow-md">
+                          <span className="mr-4 text-2xl">{recommendation.split(':')[0]}</span>
+                          <span>{recommendation.split(':')[1]}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </ScrollArea>
                 </CardContent>
               </Card>
               <Card>
@@ -1129,22 +1186,70 @@ export default function FinanceTracker() {
                 <CardContent>
                   <div className="text-center">
                     <div className="text-6xl font-bold mb-2">{financialHealthScore.toFixed(0)}</div>
-                    <p className="text-sm text-muted-foreground">
-                      {financialHealthScore >= 80 ? 'Excellent' :
-                       financialHealthScore >= 60 ? 'Good' :
-                       financialHealthScore >= 40 ? 'Fair' : 'Needs Improvement'}
+                    <p className="text-xl font-semibold mb-4">
+                      {financialHealthScore >= 80 ? '🌟 Excellent' :
+                       financialHealthScore >= 60 ? '👍 Good' :
+                       financialHealthScore >= 40 ? '😐 Fair' : '😟 Needs Improvement'}
                     </p>
                   </div>
-                  <div className="mt-4">
-                    <p className="text-xl">
-                      {financialHealthScore >= 80
-                        ? "🏆 Congratulations on your excellent financial health! You're a true money maestro. 💰 Your smart decisions have paid off, creating a solid foundation for your future. Keep maximizing your savings, exploring diverse investment opportunities, and staying informed about market trends. Consider setting more ambitious financial goals, like early retirement or starting a passion project. Remember, even at the top, there's always room for growth – maybe it's time to mentor others or contribute to charitable causes you care about. 🌟"
-                        : financialHealthScore >= 60
-                        ? "👍 Good job on maintaining a healthy financial status! You're on the right track, but there's potential for even greater success. 📈 Focus on fine-tuning your budget to increase your savings rate. Look for areas where you can trim unnecessary expenses without sacrificing your quality of life. Consider automating your savings and exploring new investment avenues to diversify your portfolio. Don't forget to review and possibly increase your insurance coverage to protect your growing assets. With a few tweaks, you could soon join the ranks of financial excellence! 💪"
-                        : financialHealthScore >= 40
-                        ? "⚖️ Your financial health is fair, which means you have a solid foundation to build upon. It's time to roll up your sleeves and make some positive changes! 🛠️ Start by creating a detailed budget to understand where every dollar is going. Prioritize paying down high-interest debt while simultaneously building your emergency fund. Look for ways to increase your income, whether through a side hustle or asking for a raise at work. Education is key – consider taking financial literacy courses or reading personal finance books to empower yourself. Remember, small, consistent steps can lead to significant improvements over time. You've got this! 🌱"
-                        : "🚨 Your financial health needs some serious TLC, but don't worry – everyone starts somewhere, and you've already taken the first step by acknowledging it. 🏁 It's time for a financial reset. Start by listing all your debts and creating a repayment plan, focusing on high-interest debts first."}
-                    </p>
+                  <div className="mt-6 text-lg space-y-4">
+                    {financialHealthScore >= 80 && (
+                      <>
+                        <p>🏆 Congratulations on your excellent financial health! You're a true money maestro.</p>
+                        <p>💰 Your smart decisions have paid off, creating a solid foundation for your future.</p>
+                        <p>🚀 Next steps:</p>
+                        <ul className="list-disc list-inside pl-4 space-y-2">
+                          <li>Keep maximizing your savings</li>
+                          <li>Explore diverse investment opportunities</li>
+                          <li>Stay informed about market trends</li>
+                          <li>Consider setting more ambitious financial goals, like early retirement or starting a passion project</li>
+                          <li>Think about mentoring others or contributing to charitable causes you care about</li>
+                        </ul>
+                        <p>Remember, even at the top, there's always room for growth! 🌟</p>
+                      </>
+                    )}
+                    {financialHealthScore >= 60 && financialHealthScore < 80 && (
+                      <>
+                        <p>👍 Good job on maintaining a healthy financial status! You're on the right track.</p>
+                        <p>📈 There's potential for even greater success. Here's how to level up:</p>
+                        <ul className="list-disc list-inside pl-4 space-y-2">
+                          <li>Fine-tune your budget to increase your savings rate</li>
+                          <li>Look for areas to trim unnecessary expenses without sacrificing quality of life</li>
+                          <li>Consider automating your savings</li>
+                          <li>Explore new investment avenues to diversify your portfolio</li>
+                          <li>Review and possibly increase your insurance coverage to protect your growing assets</li>
+                        </ul>
+                        <p>With a few tweaks, you could soon join the ranks of financial excellence! 💪</p>
+                      </>
+                    )}
+                    {financialHealthScore >= 40 && financialHealthScore < 60 && (
+                      <>
+                        <p>⚖️ Your financial health is fair, which means you have a solid foundation to build upon.</p>
+                        <p>🛠️ It's time to roll up your sleeves and make some positive changes! Here's your action plan:</p>
+                        <ul className="list-disc list-inside pl-4 space-y-2">
+                          <li>Create a detailed budget to understand where every dollar is going</li>
+                          <li>Prioritize paying down high-interest debt</li>
+                          <li>Simultaneously build your emergency fund</li>
+                          <li>Look for ways to increase your income (side hustle, raise at work)</li>
+                          <li>Educate yourself - consider taking financial literacy courses or reading personal finance books</li>
+                        </ul>
+                        <p>Remember, small, consistent steps can lead to significant improvements over time. You've got this! 🌱</p>
+                      </>
+                    )}
+                    {financialHealthScore < 40 && (
+                      <>
+                        <p>🚨 Your financial health needs some serious TLC, but don't worry – everyone starts somewhere!</p>
+                        <p>🏁 You've already taken the first step by acknowledging it. Here's your financial reset plan:</p>
+                        <ul className="list-disc list-inside pl-4 space-y-2">
+                          <li>List all your debts and create a repayment plan, focusing on high-interest debts first</li>
+                          <li>Start an emergency fund, even if it's small at first</li>
+                          <li>Track every expense for a month to understand your spending patterns</li>
+                          <li>Look for immediate ways to reduce expenses and increase income</li>
+                          <li>Seek free financial counseling if available in your area</li>
+                        </ul>
+                        <p>Remember, every financial turnaround story starts with a decision to change. You can do this! 💪</p>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
