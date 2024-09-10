@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -52,6 +52,7 @@ interface Transaction {
   amount: number
   type: 'income' | 'expense'
   category: string
+  account: 'chequing' | 'savings'
 }
 
 interface Goal {
@@ -64,7 +65,8 @@ interface Goal {
 
 interface UserData {
   name: string
-  initialBalance: string
+  chequingBalance: string
+  savingsBalance: string
   monthlyIncome: string
   monthlyExpenses: string
 }
@@ -106,17 +108,17 @@ const calculateFinancialHealth = (income: number, expenses: number, savings: num
 
 export default function FinanceTracker() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [balance, setBalance] = useState(0)
+  const [chequingBalance, setChequingBalance] = useState(0)
+  const [savingsBalance, setSavingsBalance] = useState(0)
   const [income, setIncome] = useState(0)
   const [expenses, setExpenses] = useState(0)
-  const [savings, setSavings] = useState(0)
   const [debt, setDebt] = useState(0)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
-  const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', type: 'expense' as 'income' | 'expense', category: '', date: new Date().toISOString().split('T')[0] })
+  const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', type: 'expense' as 'income' | 'expense', category: '', date: new Date().toISOString().split('T')[0], account: 'chequing' as 'chequing' | 'savings' })
   const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '', deadline: '' })
   const [showQuestionnaire, setShowQuestionnaire] = useState(true)
-  const [userData, setUserData] = useState<UserData>({ name: '', initialBalance: '', monthlyIncome: '', monthlyExpenses: '' })
+  const [userData, setUserData] = useState<UserData>({ name: '', chequingBalance: '', savingsBalance: '', monthlyIncome: '', monthlyExpenses: '' })
   const [errors, setErrors] = useState<Partial<UserData>>({})
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([])
   const [newBudgetCategory, setNewBudgetCategory] = useState({ category: '', limit: '' })
@@ -133,10 +135,10 @@ export default function FinanceTracker() {
     const storedData = localStorage.getItem('financeTrackerData')
     if (storedData) {
       const parsedData = JSON.parse(storedData)
-      setBalance(parsedData.balance)
+      setChequingBalance(parsedData.chequingBalance)
+      setSavingsBalance(parsedData.savingsBalance)
       setIncome(parsedData.income)
       setExpenses(parsedData.expenses)
-      setSavings(parsedData.savings)
       setDebt(parsedData.debt)
       setTransactions(parsedData.transactions)
       setGoals(parsedData.goals)
@@ -147,16 +149,16 @@ export default function FinanceTracker() {
   }, [])
 
   useEffect(() => {
-    const score = calculateFinancialHealth(income, expenses, savings, debt)
+    const score = calculateFinancialHealth(income, expenses, savingsBalance, debt)
     setFinancialHealthScore(score)
-  }, [income, expenses, savings, debt])
+  }, [income, expenses, savingsBalance, debt])
 
   const saveData = () => {
     const dataToSave = {
-      balance,
+      chequingBalance,
+      savingsBalance,
       income,
       expenses,
-      savings,
       debt,
       transactions,
       goals,
@@ -171,8 +173,11 @@ export default function FinanceTracker() {
     if (!validateName(userData.name)) {
       newErrors.name = 'Please enter a valid name (2-30 alphabetic characters)'
     }
-    if (!validateNumber(userData.initialBalance)) {
-      newErrors.initialBalance = 'Please enter a valid number'
+    if (!validateNumber(userData.chequingBalance)) {
+      newErrors.chequingBalance = 'Please enter a valid number'
+    }
+    if (!validateNumber(userData.savingsBalance)) {
+      newErrors.savingsBalance = 'Please enter a valid number'
     }
     if (!validateNumber(userData.monthlyIncome)) {
       newErrors.monthlyIncome = 'Please enter a valid number'
@@ -186,20 +191,22 @@ export default function FinanceTracker() {
 
   const handleQuestionnaireSubmit = () => {
     if (validateUserData()) {
-      const initialBalance = parseFloat(userData.initialBalance)
+      const initialChequingBalance = parseFloat(userData.chequingBalance)
+      const initialSavingsBalance = parseFloat(userData.savingsBalance)
       const monthlyIncome = parseFloat(userData.monthlyIncome)
       const monthlyExpenses = parseFloat(userData.monthlyExpenses)
 
-      setBalance(initialBalance)
+      setChequingBalance(initialChequingBalance)
+      setSavingsBalance(initialSavingsBalance)
       setIncome(monthlyIncome)
       setExpenses(monthlyExpenses)
-      setSavings(initialBalance)
 
       const currentDate = new Date().toISOString().split('T')[0]
       setTransactions([
-        { id: 1, date: currentDate, description: 'Initial Balance', amount: initialBalance, type: 'income', category: 'Other' },
-        { id: 2, date: currentDate, description: 'Monthly Income', amount: monthlyIncome, type: 'income', category: 'Other' },
-        { id: 3, date: currentDate, description: 'Monthly Expenses', amount: -monthlyExpenses, type: 'expense', category: 'Other' },
+        { id: 1, date: currentDate, description: 'Initial Chequing Balance', amount: initialChequingBalance, type: 'income', category: 'Other', account: 'chequing' },
+        { id: 2, date: currentDate, description: 'Initial Savings Balance', amount: initialSavingsBalance, type: 'income', category: 'Other', account: 'savings' },
+        { id: 3, date: currentDate, description: 'Monthly Income', amount: monthlyIncome, type: 'income', category: 'Other', account: 'chequing' },
+        { id: 4, date: currentDate, description: 'Monthly Expenses', amount: -monthlyExpenses, type: 'expense', category: 'Other', account: 'chequing' },
       ])
 
       setShowQuestionnaire(false)
@@ -211,7 +218,7 @@ export default function FinanceTracker() {
   }
 
   const addTransaction = () => {
-    if (newTransaction.description && newTransaction.amount && newTransaction.category) {
+    if (newTransaction.description && newTransaction.amount && newTransaction.category && newTransaction.account) {
       if (!validateNumber(newTransaction.amount)) {
         toast({
           description: 'Please enter a valid amount',
@@ -226,11 +233,12 @@ export default function FinanceTracker() {
         amount,
         type: newTransaction.type,
         category: newTransaction.category,
+        account: newTransaction.account,
       }
       const updatedTransactions = [transaction, ...transactions]
       setTransactions(updatedTransactions)
-      updateFinances(amount)
-      setNewTransaction({ description: '', amount: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0] })
+      updateFinances(amount, newTransaction.account)
+      setNewTransaction({ description: '', amount: '', type: 'expense', category: '', date: new Date().toISOString().split('T')[0], account: 'chequing' })
       saveData()
       toast({
         description: 'Transaction added successfully',
@@ -271,17 +279,17 @@ export default function FinanceTracker() {
     }
   }
 
-  const updateFinances = (amount: number) => {
-    setBalance(prevBalance => {
-      const newBalance = prevBalance + amount
-      if (amount > 0) {
-        setIncome(prevIncome => prevIncome + amount)
-      } else {
-        setExpenses(prevExpenses => prevExpenses - amount)
-      }
-      setSavings(newBalance)
-      return newBalance
-    })
+  const updateFinances = (amount: number, account: 'chequing' | 'savings') => {
+    if (account === 'chequing') {
+      setChequingBalance(prevBalance => prevBalance + amount)
+    } else {
+      setSavingsBalance(prevBalance => prevBalance + amount)
+    }
+    if (amount > 0) {
+      setIncome(prevIncome => prevIncome + amount)
+    } else {
+      setExpenses(prevExpenses => prevExpenses - amount)
+    }
   }
 
   const addBudgetCategory = () => {
@@ -315,7 +323,7 @@ export default function FinanceTracker() {
     if (transactionToDelete) {
       const updatedTransactions = transactions.filter(t => t.id !== id)
       setTransactions(updatedTransactions)
-      updateFinances(-transactionToDelete.amount)
+      updateFinances(-transactionToDelete.amount, transactionToDelete.account)
       saveData()
       toast({
         description: 'Transaction deleted successfully',
@@ -367,7 +375,7 @@ export default function FinanceTracker() {
     const recommendations = [];
     const totalIncome = income;
     const totalExpenses = expenses;
-    const savingsRate = totalIncome > 0 ? (savings / totalIncome) * 100 : 0;
+    const savingsRate = totalIncome > 0 ? (savingsBalance / totalIncome) * 100 : 0;
     const budgetComparisonData = getBudgetComparisonData();
 
     const highestExpenseCategory = budgetComparisonData.length > 0
@@ -385,7 +393,7 @@ export default function FinanceTracker() {
     }
 
     const emergencyFundTarget = totalExpenses * 3;
-    if (savings < emergencyFundTarget) {
+    if (savingsBalance < emergencyFundTarget) {
       recommendations.push(`Work on building an emergency fund of ${formatCurrency(emergencyFundTarget)}. This will cover 3 months of expenses.`);
     }
 
@@ -444,19 +452,19 @@ export default function FinanceTracker() {
   }
 
   const doughnutChartData = {
-    labels: ['Savings', 'Expenses', 'Debt'],
+    labels: ['Chequing', 'Savings', 'Debt'],
     datasets: [
       {
-        data: [savings, expenses, debt],
+        data: [chequingBalance, savingsBalance, debt],
         backgroundColor: [
           'rgba(75, 192, 192, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
           'rgba(255, 206, 86, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
         ],
         borderColor: [
           'rgba(75, 192, 192, 1)',
-          'rgba(255, 99, 132, 1)',
           'rgba(255, 206, 86, 1)',
+          'rgba(255, 99, 132, 1)',
         ],
         borderWidth: 1,
       },
@@ -469,10 +477,10 @@ export default function FinanceTracker() {
       {
         label: 'Financial Health',
         data: [
-          income > 0 ? (savings / income) * 100 : 0,
-          income > 0 ? 100 - (debt / income) * 100 : 0,
-          income > 0 ? 100 - (expenses / income) * 100 : 0,
-          (expenses + savings) > 0 ? (income / (expenses + savings)) * 100 : 0,
+          income > 0 ? Math.min((savingsBalance / income) * 100, 100) : 0,
+          income > 0 ? Math.min(100 - (debt / income) * 100, 100) : 0,
+          income > 0 ? Math.min(100 - (expenses / income) * 100, 100) : 0,
+          (expenses + savingsBalance) > 0 ? Math.min((income / (expenses + savingsBalance)) * 100, 100) : 0,
           50, // Placeholder for investment diversification
         ],
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -487,15 +495,15 @@ export default function FinanceTracker() {
 
   const resetAllData = () => {
     localStorage.removeItem('financeTrackerData')
-    setBalance(0)
+    setChequingBalance(0)
+    setSavingsBalance(0)
     setIncome(0)
     setExpenses(0)
-    setSavings(0)
     setDebt(0)
     setTransactions([])
     setGoals([])
     setBudgetCategories([])
-    setUserData({ name: '', initialBalance: '', monthlyIncome: '', monthlyExpenses: '' })
+    setUserData({ name: '', chequingBalance: '', savingsBalance: '', monthlyIncome: '', monthlyExpenses: '' })
     setShowQuestionnaire(true)
     setShowResetDialog(false)
     toast({
@@ -514,7 +522,6 @@ export default function FinanceTracker() {
       
       setIncome(newMonthlyIncome)
       setExpenses(newMonthlyExpenses)
-      setSavings(prev => prev + (newMonthlyIncome - income) - (newMonthlyExpenses - expenses))
       
       saveData()
       setShowSettings(false)
@@ -526,6 +533,59 @@ export default function FinanceTracker() {
         description: "Please enter valid values for all fields",
         variant: "destructive",
       })
+    }
+  }
+
+  const exportData = () => {
+    const dataToExport = {
+      chequingBalance,
+      savingsBalance,
+      income,
+      expenses,
+      debt,
+      transactions,
+      goals,
+      budgetCategories,
+      userData
+    }
+    const dataStr = JSON.stringify(dataToExport)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    const exportFileDefaultName = 'financial_data.json'
+
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
+  }
+
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const importedData = JSON.parse(e.target?.result as string)
+          setChequingBalance(importedData.chequingBalance)
+          setSavingsBalance(importedData.savingsBalance)
+          setIncome(importedData.income)
+          setExpenses(importedData.expenses)
+          setDebt(importedData.debt)
+          setTransactions(importedData.transactions)
+          setGoals(importedData.goals)
+          setBudgetCategories(importedData.budgetCategories)
+          setUserData(importedData.userData)
+          saveData()
+          toast({
+            description: "Data imported successfully",
+          })
+        } catch (error) {
+          toast({
+            description: "Error importing data. Please check the file format.",
+            variant: "destructive",
+          })
+        }
+      }
+      reader.readAsText(file)
     }
   }
 
@@ -556,14 +616,24 @@ export default function FinanceTracker() {
                     {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="initialBalance">Initial Balance ($)</Label>
+                    <Label htmlFor="chequingBalance">Initial Chequing Balance ($)</Label>
                     <Input
-                      id="initialBalance"
+                      id="chequingBalance"
                       type="text"
-                      value={userData.initialBalance}
-                      onChange={(e) => setUserData({ ...userData, initialBalance: e.target.value })}
+                      value={userData.chequingBalance}
+                      onChange={(e) => setUserData({ ...userData, chequingBalance: e.target.value })}
                     />
-                    {errors.initialBalance && <p className="text-red-500 text-sm">{errors.initialBalance}</p>}
+                    {errors.chequingBalance && <p className="text-red-500 text-sm">{errors.chequingBalance}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="savingsBalance">Initial Savings Balance ($)</Label>
+                    <Input
+                      id="savingsBalance"
+                      type="text"
+                      value={userData.savingsBalance}
+                      onChange={(e) => setUserData({ ...userData, savingsBalance: e.target.value })}
+                    />
+                    {errors.savingsBalance && <p className="text-red-500 text-sm">{errors.savingsBalance}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="monthlyIncome">Monthly Income ($)</Label>
@@ -627,13 +697,25 @@ export default function FinanceTracker() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+              <CardTitle className="text-sm font-medium">Chequing Balance</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(balance)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(chequingBalance)}</div>
               <p className="text-xs text-muted-foreground">
-                {balance > 0 ? '+' : ''}{income > 0 ? ((balance / income) * 100).toFixed(1) : 0}% from last month
+                {chequingBalance > 0 ? '+' : ''}{income > 0 ? ((chequingBalance / income) * 100).toFixed(1) : 0}% of income
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Savings Balance</CardTitle>
+              <PiggyBank className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(savingsBalance)}</div>
+              <p className="text-xs text-muted-foreground">
+                {income > 0 ? ((savingsBalance / income) * 100).toFixed(1) : 0}% of income
               </p>
             </CardContent>
           </Card>
@@ -645,7 +727,7 @@ export default function FinanceTracker() {
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(income)}</div>
               <p className="text-xs text-muted-foreground">
-                +{(expenses + savings) > 0 ? ((income / (expenses + savings)) * 100).toFixed(1) : 0}% from last month
+                +{(expenses + savingsBalance) > 0 ? ((income / (expenses + savingsBalance)) * 100).toFixed(1) : 0}% from last month
               </p>
             </CardContent>
           </Card>
@@ -658,18 +740,6 @@ export default function FinanceTracker() {
               <div className="text-2xl font-bold">{formatCurrency(expenses)}</div>
               <p className="text-xs text-muted-foreground">
                 {income > 0 ? ((expenses / income) * 100).toFixed(1) : 0}% of income
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Savings</CardTitle>
-              <PiggyBank className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(savings)}</div>
-              <p className="text-xs text-muted-foreground">
-                {income > 0 ? ((savings / income) * 100).toFixed(1) : 0}% of income
               </p>
             </CardContent>
           </Card>
@@ -720,7 +790,7 @@ export default function FinanceTracker() {
                               const label = context.label || '';
                               const value = context.raw as number;
                               const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0) as number;
-                              const percentage = total >  0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
                               return `${label}: ${formatCurrency(value)} (${percentage}%)`;
                             }
                           }
@@ -737,9 +807,9 @@ export default function FinanceTracker() {
                     ref={chartRef}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    {hoveredSection === 'Savings' && <Wallet className="h-12 w-12 text-teal-500" />}
-                    {hoveredSection === 'Expenses' && <ArrowDownRight className="h-12 w-12 text-pink-500" />}
-                    {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-yellow-500" />}
+                    {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
+                    {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
+                    {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
                     {!hoveredSection && <DollarSign className="h-12 w-12 text-gray-400" />}
                   </div>
                 </CardContent>
@@ -757,6 +827,7 @@ export default function FinanceTracker() {
                           <TableHead>Description</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Category</TableHead>
+                          <TableHead>Account</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -768,6 +839,7 @@ export default function FinanceTracker() {
                               {formatCurrency(Math.abs(transaction.amount))}
                             </TableCell>
                             <TableCell>{transaction.category}</TableCell>
+                            <TableCell>{transaction.account}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -785,7 +857,7 @@ export default function FinanceTracker() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 mb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
                     <Input
                       placeholder="Description"
                       value={newTransaction.description}
@@ -822,6 +894,18 @@ export default function FinanceTracker() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <Select
+                      value={newTransaction.account}
+                      onValueChange={(value: 'chequing' | 'savings') => setNewTransaction({ ...newTransaction, account: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="chequing">Chequing</SelectItem>
+                        <SelectItem value="savings">Savings</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Input
                       type="date"
                       value={newTransaction.date}
@@ -839,6 +923,7 @@ export default function FinanceTracker() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Category</TableHead>
+                        <TableHead>Account</TableHead>
                         <TableHead>Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -852,6 +937,7 @@ export default function FinanceTracker() {
                           </TableCell>
                           <TableCell>{transaction.type}</TableCell>
                           <TableCell>{transaction.category}</TableCell>
+                          <TableCell>{transaction.account}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => deleteTransaction(transaction.id)}>
                               <Trash2 className="h-4 w-4" />
@@ -1203,11 +1289,11 @@ export default function FinanceTracker() {
                 <li>For any unlawful purpose or to solicit the performance of any illegal activity</li>
                 <li>To harass, abuse, or harm another person</li>
                 <li>To impersonate or attempt to impersonate the author, another user, or any other person or entity</li>
-                <li>To engage in any other conduct that restricts or inhibits anyone&apos;s use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
+                <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
               </ul>
 
               <h2 className="text-xl font-bold">6. Disclaimer</h2>
-              <p>FinancialFlow is provided on an &quot;as is&quot; and &quot;as available&quot; basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
+              <p>FinancialFlow is provided on an "as is" and "as available" basis. The author makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties, including without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.</p>
 
               <h2 className="text-xl font-bold">7. Limitation of Liability</h2>
               <p>In no event shall the author be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
