@@ -1626,7 +1626,7 @@ export default function FinanceTracker() {
                     {financialHealthScore >= 60 && financialHealthScore < 80 && (
                       <>
                         <p>👍 Good job on maintaining a healthy financial status! You&apos;re on the right track.</p>
-                        <p>📈 There's potential for even greater success. Here&apos;s how to level up:</p>
+                        <p>📈 There&apos;s potential for even greater success. Here&apos;s how to level up:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
                           <li>Fine-tune your budget to increase your savings rate</li>
                           <li>Look for areas to trim unnecessary expenses without sacrificing quality of life</li>
@@ -1640,7 +1640,7 @@ export default function FinanceTracker() {
                     {financialHealthScore >= 40 && financialHealthScore < 60 && (
                       <>
                         <p>⚖️ Your financial health is fair, which means you have a solid foundation to build upon.</p>
-                        <p>🛠️ It's time to roll up your sleeves and make some positive changes! Here&apos;s your action plan:</p>
+                        <p>🛠️ It&apos;s time to roll up your sleeves and make some positive changes! Here&apos;s your action plan:</p>
                         <ul className="list-disc list-inside pl-4 space-y-2">
                           <li>Create a detailed budget to understand where every dollar is going</li>
                           <li>Prioritize paying down high-interest debt</li>
@@ -1865,7 +1865,7 @@ export default function FinanceTracker() {
                 <li>For any unlawful purpose or to solicit the performance of any illegal activity</li>
                 <li>To harass, abuse, or harm another person</li>
                 <li>To impersonate or attempt to impersonate the author, another user, or any other person or entity</li>
-                <li>To engage in any other conduct that restricts or inhibits anyone's use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
+                <li>To engage in any other conduct that restricts or inhibits anyone&apos;s use or enjoyment of the Service, or which, as determined by us, may harm or offend the author or users of the Service or expose them to liability</li>
               </ul>
 
               <h2 className="text-xl font-bold">6. Disclaimer</h2>
