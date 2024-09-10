@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp, Briefcase, Bitcoin } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -207,6 +207,7 @@ export default function FinanceTracker() {
       monthlyIncome: data.userData?.monthlyIncome || '0',
       monthlyExpenses: data.userData?.monthlyExpenses || '0'
     })
+    setFinancialHealthScore(data.financialHealthScore || 0)
     setShowQuestionnaire(false)
   }
 
@@ -221,7 +222,8 @@ export default function FinanceTracker() {
       budgetCategories,
       investments,
       cryptocurrencies,
-      userData
+      userData,
+      financialHealthScore
     }
     localStorage.setItem('financeTrackerData', JSON.stringify(dataToSave))
   }
@@ -711,7 +713,8 @@ export default function FinanceTracker() {
       budgetCategories,
       investments,
       cryptocurrencies,
-      userData
+      userData,
+      financialHealthScore
     }
     const dataStr = JSON.stringify(dataToExport)
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
@@ -1830,7 +1833,7 @@ export default function FinanceTracker() {
           <ScrollArea className="h-[400px] w-full rounded-md border p-4">
             <div className="space-y-4">
               <h2 className="text-xl font-bold">1. Acceptance of Terms</h2>
-              <p>By accessing or using FinancialFlow, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.</p>
+              <p>By accessing or using FinancialFlow, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service. This web application is developed from scratch and maintained in its entirety by Sunny Jayendra Patel</p>
 
               <h2 className="text-xl font-bold">2. Description of Service</h2>
               <p>FinancialFlow is a personal finance management tool designed to help users track their income, expenses, and financial goals. This service is provided for personal use only and should not be used for professional financial advice.</p>
