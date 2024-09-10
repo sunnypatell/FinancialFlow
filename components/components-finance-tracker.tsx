@@ -517,9 +517,13 @@ export default function FinanceTracker() {
 
   const saveSettings = () => {
     if (validateUserData()) {
+      const newChequingBalance = parseFloat(userData.chequingBalance)
+      const newSavingsBalance = parseFloat(userData.savingsBalance)
       const newMonthlyIncome = parseFloat(userData.monthlyIncome)
       const newMonthlyExpenses = parseFloat(userData.monthlyExpenses)
       
+      setChequingBalance(newChequingBalance)
+      setSavingsBalance(newSavingsBalance)
       setIncome(newMonthlyIncome)
       setExpenses(newMonthlyExpenses)
       
@@ -1192,6 +1196,13 @@ export default function FinanceTracker() {
                   </a>
                 </Button>
               </div>
+              <Button 
+                variant="outline" 
+                className="mt-4 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
+                onClick={() => setShowResetDialog(true)}
+              >
+                Reset All Data ⚠️
+              </Button>
             </div>
           </div>
         </div>
@@ -1216,6 +1227,28 @@ export default function FinanceTracker() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="chequingBalance" className="text-right">
+                Chequing Balance
+              </Label>
+              <Input
+                id="chequingBalance"
+                value={userData.chequingBalance}
+                onChange={(e) => handleSettingsChange('chequingBalance', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="savingsBalance" className="text-right">
+                Savings Balance
+              </Label>
+              <Input
+                id="savingsBalance"
+                value={userData.savingsBalance}
+                onChange={(e) => handleSettingsChange('savingsBalance', e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="monthlyIncome" className="text-right">
                 Monthly Income
               </Label>
@@ -1235,6 +1268,29 @@ export default function FinanceTracker() {
                 value={userData.monthlyExpenses}
                 onChange={(e) => handleSettingsChange('monthlyExpenses', e.target.value)}
                 className="col-span-3"
+              />
+            </div>
+          </div>
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-lg font-semibold mb-2">Data Management</h3>
+            <p className="text-sm text-gray-500 mb-4">Export or import your financial data for backup or when switching devices.</p>
+            <div className="flex space-x-4">
+              <Button onClick={exportData}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Data
+              </Button>
+              <Label htmlFor="import-file" className="cursor-pointer">
+                <div className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Data
+                </div>
+              </Label>
+              <Input
+                id="import-file"
+                type="file"
+                onChange={importData}
+                className="hidden"
+                accept=".json"
               />
             </div>
           </div>
@@ -1313,14 +1369,6 @@ export default function FinanceTracker() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Button 
-        variant="outline" 
-        className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 transition-colors duration-300 font-semibold py-2 px-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 z-50"
-        onClick={() => setShowResetDialog(true)}
-      >
-        Reset All Data ⚠️
-      </Button>
 
       <Toaster />
     </div>
