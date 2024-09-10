@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Line, Bar, Doughnut, Radar } from 'react-chartjs-2'
+import { Line, Bar, PolarArea, Doughnut, Radar } from 'react-chartjs-2'
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -29,7 +29,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, DollarSign, PiggyBank, Trash2, Github, Linkedin, Globe, Settings, Wallet, CreditCard, Download, Upload, Target, AlertTriangle, TrendingUp, Briefcase, Bitcoin } from 'lucide-react'
 
 ChartJS.register(
   CategoryScale,
@@ -82,12 +82,29 @@ interface Recommendation {
   description: string
 }
 
+interface Investment {
+  id: number
+  type: 'RRSP' | 'TFSA' | 'GIC' | 'OSAP'
+  balance: number
+  interestRate?: number
+  maturityDate?: string
+}
+
+interface Cryptocurrency {
+  id: number
+  name: string
+  symbol: string
+  amount: number
+  purchasePrice: number
+  currentPrice: number
+}
+
 const categories = [
   'Food', 'Transport', 'Entertainment', 'Utilities', 'Rent', 'Shopping', 'Health', 'Education', 'Savings', 'Other'
 ]
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(value)
 }
 
 const validateNumber = (value: string): boolean => {
@@ -98,62 +115,20 @@ const validateName = (value: string): boolean => {
   return /^[a-zA-Z\s]{2,30}$/.test(value)
 }
 
-const calculateFinancialHealth = (income: number, expenses: number, savings: number, debt: number): number => {
+const calculateFinancialHealth = (income: number, expenses: number, savings: number, investments: number, debt: number): number => {
   if (income === 0) return 0
   const savingsRate = savings / income
+  const investmentRate = investments / income
   const debtToIncomeRatio = debt / income
   const expenseRatio = expenses / income
 
   let score = 0
-  score += savingsRate * 40 // Weight savings rate at 40%
-  score += (1 - debtToIncomeRatio) * 30 // Weight debt-to-income ratio at 30%
-  score += (1 - expenseRatio) * 30 // Weight expense ratio at 30%
+  score += savingsRate * 30 // Weight savings rate at 30%
+  score += investmentRate * 20 // Weight investment rate at 20%
+  score += (1 - debtToIncomeRatio) * 25 // Weight debt-to-income ratio at 25%
+  score += (1 - expenseRatio) * 25 // Weight expense ratio at 25%
 
   return Math.min(Math.max(score * 100, 0), 100) // Ensure score is between 0 and 100
-}
-
-const generateBudgetRecommendations = (savingsRate: number, emergencyFund: number, expenseToIncomeRatio: number): Recommendation[] => {
-  const recommendations: Recommendation[] = []
-
-  if (savingsRate >= 20) {
-    recommendations.push({
-      icon: <PiggyBank className="h-8 w-8 text-green-500" />,
-      title: "Savings Superstar",
-      description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
-    })
-  } else {
-    recommendations.push({
-      icon: <Target className="h-8 w-8 text-blue-500" />,
-      title: "Savings Boost Needed",
-      description: `You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`
-    })
-  }
-
-  if (emergencyFund < 3) {
-    recommendations.push({
-      icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
-      title: "Emergency Fund Alert",
-      description: `Your current emergency fund covers ${emergencyFund.toFixed(1)} months of expenses. Aim for at least 3-6 months. Start small by setting aside a fixed amount each month specifically for emergencies.`
-    })
-  }
-
-  if (expenseToIncomeRatio > 0.7) {
-    recommendations.push({
-      icon: <TrendingUp className="h-8 w-8 text-red-500" />,
-      title: "Income-Expense Gap",
-      description: `Your expenses are ${(expenseToIncomeRatio * 100).toFixed(1)}% of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
-    })
-  }
-
-  if (recommendations.length === 0) {
-    recommendations.push({
-      icon: <DollarSign className="h-8 w-8 text-green-500" />,
-      title: "Financial Health Check",
-      description: "Great job managing your finances! Keep monitoring your budget and look for ways to optimize your spending and savings."
-    })
-  }
-
-  return recommendations
 }
 
 export default function FinanceTracker() {
@@ -162,7 +137,6 @@ export default function FinanceTracker() {
   const [savingsBalance, setSavingsBalance] = useState(0)
   const [income, setIncome] = useState(0)
   const [expenses, setExpenses] = useState(0)
-  const [debt, setDebt] = useState(0)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', type: 'expense' as 'income' | 'expense', category: '', date: new Date().toISOString().split('T')[0], account: 'chequing' as 'chequing' | 'savings' })
@@ -179,6 +153,28 @@ export default function FinanceTracker() {
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const { toast } = useToast()
 
+  // New state for investments and cryptocurrencies
+  const [investments, setInvestments] = useState<Investment[]>([])
+  const [newInvestment, setNewInvestment] = useState({ type: 'RRSP' as 'RRSP' | 'TFSA' | 'GIC' | 'OSAP', balance: '', interestRate: '', maturityDate: '' })
+  const [cryptocurrencies, setCryptocurrencies] = useState<Cryptocurrency[]>([])
+  const [newCryptocurrency, setNewCryptocurrency] = useState({ name: '', symbol: '', amount: '', purchasePrice: '', currentPrice: '' })
+
+  const getInvestmentDiversificationScore = (): number => {
+    const totalInvestments = investments.reduce((sum, inv) => sum + inv.balance, 0)
+    const totalCryptoValue = cryptocurrencies.reduce((sum, crypto) => sum + crypto.amount * crypto.currentPrice, 0)
+    const totalInvestedValue = totalInvestments + totalCryptoValue
+
+    if (totalInvestedValue === 0) return 0
+
+    const investmentTypes = new Set(investments.map(inv => inv.type))
+    const cryptoCount = cryptocurrencies.length
+
+    // Calculate diversification score based on number of investment types and crypto holdings
+    const diversificationScore = (investmentTypes.size * 10) + (cryptoCount * 5)
+
+    return Math.min(diversificationScore, 100)
+  }
+
   useEffect(() => {
     const storedData = localStorage.getItem('financeTrackerData')
     if (storedData) {
@@ -188,19 +184,22 @@ export default function FinanceTracker() {
   }, [])
 
   useEffect(() => {
-    const score = calculateFinancialHealth(income, expenses, savingsBalance, debt)
+    const totalInvestments = investments.reduce((sum, inv) => sum + inv.balance, 0)
+    const totalCryptoValue = cryptocurrencies.reduce((sum, crypto) => sum + crypto.amount * crypto.currentPrice, 0)
+    const score = calculateFinancialHealth(income, expenses, savingsBalance, totalInvestments + totalCryptoValue, Math.max(0, -chequingBalance))
     setFinancialHealthScore(score)
-  }, [income, expenses, savingsBalance, debt])
+  }, [income, expenses, savingsBalance, chequingBalance, investments, cryptocurrencies])
 
   const updateAllData = (data: any) => {
     setChequingBalance(data.chequingBalance || 0)
     setSavingsBalance(data.savingsBalance || 0)
     setIncome(data.income || 0)
     setExpenses(data.expenses || 0)
-    setDebt(data.debt || 0)
     setTransactions(data.transactions || [])
     setGoals(data.goals || [])
     setBudgetCategories(data.budgetCategories || [])
+    setInvestments(data.investments || [])
+    setCryptocurrencies(data.cryptocurrencies || [])
     setUserData({
       name: data.userData?.name || '',
       chequingBalance: data.userData?.chequingBalance || '0',
@@ -217,10 +216,11 @@ export default function FinanceTracker() {
       savingsBalance,
       income,
       expenses,
-      debt,
       transactions,
       goals,
       budgetCategories,
+      investments,
+      cryptocurrencies,
       userData
     }
     localStorage.setItem('financeTrackerData', JSON.stringify(dataToSave))
@@ -439,28 +439,102 @@ export default function FinanceTracker() {
     })
   }
 
-  const getSpendingTrendsData = () => {
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const currentDate = new Date();
-    const labels = Array.from({length: 6}, (_, i) => {
-      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 5 + i, 1);
-      return monthNames[d.getMonth()];
-    });
+  const generateBudgetRecommendations = (): Recommendation[] => {
+    const recommendations: Recommendation[] = []
+    const totalIncome = income
+    const totalExpenses = expenses
+    const savingsRate = totalIncome > 0 ? (savingsBalance / totalIncome) * 100 : 0
+    const emergencyFundTarget = totalExpenses * 3
+  
+    if (savingsRate < 20) {
+      recommendations.push({
+        icon: <Target className="h-6 w-6 text-blue-500" />,
+        title: "Savings Boost Needed",
+        description: `You're currently saving ${savingsRate.toFixed(1)}% of your income. Aim to increase this to at least 20%. Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.`
+      })
+    } else {
+      recommendations.push({
+        icon: <PiggyBank className="h-6 w-6 text-green-500" />,
+        title: "Savings Superstar",
+        description: `Fantastic job on your savings! You're currently stashing away ${savingsRate.toFixed(1)}% of your income. Keep up the great work and consider setting even more ambitious savings goals.`
+      })
+    }
+  
+    if (savingsBalance < emergencyFundTarget) {
+      recommendations.push({
+        icon: <AlertTriangle className="h-6 w-6 text-yellow-500" />,
+        title: "Emergency Fund Alert",
+        description: `Your current savings of ${formatCurrency(savingsBalance)} is below the recommended 3-month emergency fund of ${formatCurrency(emergencyFundTarget)}. Start small by setting aside a fixed amount each month specifically for emergencies.`
+      })
+    }
+  
+    if (totalExpenses / totalIncome > 0.7) {
+      recommendations.push({
+        icon: <TrendingUp className="h-6 w-6 text-red-500" />,
+        title: "Income-Expense Gap",
+        description: `Your expenses are taking up ${((totalExpenses / totalIncome) * 100).toFixed(1)}% of your income. Consider ways to increase your income or reduce expenses to widen this gap.`
+      })
+    }
+  
+    return recommendations
+  }
 
-    const incomeData = Array(6).fill(0);
-    const expenseData = Array(6).fill(0);
+  const getFinancialBreakdownData = () => {
+    const totalAssets = chequingBalance + savingsBalance
+    const debt = Math.max(0, -chequingBalance) // Consider negative chequing balance as debt
+    const netWorth = totalAssets - debt
+  
+    return {
+      labels: ['Chequing', 'Savings', 'Debt', 'Net Worth'],
+      datasets: [
+        {
+          data: [Math.max(0, chequingBalance), savingsBalance, debt, netWorth],
+          backgroundColor: [
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+          ],
+          borderColor: [
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(153, 102, 255, 1)',
+          ],
+          borderWidth: 1,
+        },
+      ],
+    }
+  }
+
+  const getCashFlowData = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const currentDate = new Date()
+    const labels = Array.from({length: 6}, (_, i) => {
+      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 5 + i, 1)
+      return monthNames[d.getMonth()]
+    })
+
+    const incomeData = Array(6).fill(0)
+    const expenseData = Array(6).fill(0)
+    const savingsData = Array(6).fill(0)
 
     transactions.forEach(transaction => {
-      const transactionDate = new Date(transaction.date);
-      const monthIndex = currentDate.getMonth() - 5 + transactionDate.getMonth();
+      const transactionDate = new Date(transaction.date)
+      const monthIndex = 5 - (currentDate.getMonth() - transactionDate.getMonth() + (currentDate.getFullYear() - transactionDate.getFullYear()) * 12)
       if (monthIndex >= 0 && monthIndex < 6) {
         if (transaction.type === 'income') {
-          incomeData[monthIndex] += transaction.amount;
+          incomeData[monthIndex] += transaction.amount
         } else {
-          expenseData[monthIndex] += Math.abs(transaction.amount);
+          expenseData[monthIndex] += Math.abs(transaction.amount)
         }
       }
-    });
+    })
+
+    // Calculate savings (income - expenses) for each month
+    for (let i = 0; i < 6; i++) {
+      savingsData[i] = incomeData[i] - expenseData[i]
+    }
 
     return {
       labels,
@@ -479,32 +553,39 @@ export default function FinanceTracker() {
           backgroundColor: 'rgba(255, 99, 132, 0.5)',
           tension: 0.1,
         },
+        {
+          label: 'Savings',
+          data: savingsData,
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          tension: 0.1,
+        },
       ],
-    };
+    }
   }
 
   const getDetailedSpendingTrendsData = () => {
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const currentDate = new Date();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const currentDate = new Date()
     const labels = Array.from({length: 12}, (_, i) => {
-      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 11 + i, 1);
-      return monthNames[d.getMonth()];
-    });
+      const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 11 + i, 1)
+      return monthNames[d.getMonth()]
+    })
 
-    const incomeData = Array(12).fill(0);
-    const expenseData = Array(12).fill(0);
+    const incomeData = Array(12).fill(0)
+    const expenseData = Array(12).fill(0)
 
     transactions.forEach(transaction => {
-      const transactionDate = new Date(transaction.date);
-      const monthIndex = currentDate.getMonth() - 11 + transactionDate.getMonth();
+      const transactionDate = new Date(transaction.date)
+      const monthIndex = 11 - (currentDate.getMonth() - transactionDate.getMonth() + (currentDate.getFullYear() - transactionDate.getFullYear()) * 12)
       if (monthIndex >= 0 && monthIndex < 12) {
         if (transaction.type === 'income') {
-          incomeData[monthIndex] += transaction.amount;
+          incomeData[monthIndex] += transaction.amount
         } else {
-          expenseData[monthIndex] += Math.abs(transaction.amount);
+          expenseData[monthIndex] += Math.abs(transaction.amount)
         }
       }
-    });
+    })
 
     return {
       labels,
@@ -524,7 +605,7 @@ export default function FinanceTracker() {
           tension: 0.1,
         },
       ],
-    };
+    }
   }
 
   const barChartData = {
@@ -549,26 +630,6 @@ export default function FinanceTracker() {
     ],
   }
 
-  const doughnutChartData = {
-    labels: ['Chequing', 'Savings', 'Debt'],
-    datasets: [
-      {
-        data: [chequingBalance, savingsBalance, debt],
-        backgroundColor: [
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
-        ],
-        borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(255, 99, 132, 1)',
-        ],
-        borderWidth: 1,
-      },
-    ],
-  }
-
   const radarChartData = {
     labels: ['Savings Rate', 'Debt Management', 'Expense Control', 'Income Growth', 'Investment Diversification'],
     datasets: [
@@ -576,10 +637,10 @@ export default function FinanceTracker() {
         label: 'Financial Health',
         data: [
           income > 0 ? Math.min((savingsBalance / income) * 100, 100) : 0,
-          income > 0 ? Math.min(100 - (debt / income) * 100, 100) : 0,
+          income > 0 ? Math.min(100 - (Math.max(0, -chequingBalance) / income) * 100, 100) : 0,
           income > 0 ? Math.min(100 - (expenses / income) * 100, 100) : 0,
           (expenses + savingsBalance) > 0 ? Math.min((income / (expenses + savingsBalance)) * 100, 100) : 0,
-          50, // Placeholder for investment diversification
+          getInvestmentDiversificationScore(),
         ],
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         borderColor: 'rgb(75, 192, 192)',
@@ -597,10 +658,11 @@ export default function FinanceTracker() {
     setSavingsBalance(0)
     setIncome(0)
     setExpenses(0)
-    setDebt(0)
     setTransactions([])
     setGoals([])
     setBudgetCategories([])
+    setInvestments([])
+    setCryptocurrencies([])
     setUserData({ name: '', chequingBalance: '', savingsBalance: '', monthlyIncome: '', monthlyExpenses: '' })
     setShowQuestionnaire(true)
     setShowResetDialog(false)
@@ -644,10 +706,11 @@ export default function FinanceTracker() {
       savingsBalance,
       income,
       expenses,
-      debt,
       transactions,
       goals,
       budgetCategories,
+      investments,
+      cryptocurrencies,
       userData
     }
     const dataStr = JSON.stringify(dataToExport)
@@ -680,6 +743,117 @@ export default function FinanceTracker() {
         }
       }
       reader.readAsText(file)
+    }
+  }
+
+  const addInvestment = () => {
+    if (newInvestment.type && newInvestment.balance) {
+      if (!validateNumber(newInvestment.balance)) {
+        toast({
+          description: 'Please enter a valid balance',
+        })
+        return
+      }
+      const investment: Investment = {
+        id: investments.length + 1,
+        type: newInvestment.type,
+        balance: parseFloat(newInvestment.balance),
+        interestRate: newInvestment.interestRate ? parseFloat(newInvestment.interestRate) : undefined,
+        maturityDate: newInvestment.maturityDate || undefined,
+      }
+      const updatedInvestments = [...investments, investment]
+      setInvestments(updatedInvestments)
+      setNewInvestment({ type: 'RRSP', balance: '', interestRate: '', maturityDate: '' })
+      saveData()
+      toast({
+        description: 'Investment added successfully',
+      })
+    } else {
+      toast({
+        description: 'Please fill in all required fields for the investment',
+      })
+    }
+  }
+
+  const deleteInvestment = (id: number) => {
+    const updatedInvestments = investments.filter(inv => inv.id !== id)
+    setInvestments(updatedInvestments)
+    saveData()
+    toast({
+      description: 'Investment deleted successfully',
+    })
+  }
+
+  const addCryptocurrency = () => {
+    if (newCryptocurrency.name && newCryptocurrency.symbol && newCryptocurrency.amount && newCryptocurrency.purchasePrice && newCryptocurrency.currentPrice) {
+      if (!validateNumber(newCryptocurrency.amount) || !validateNumber(newCryptocurrency.purchasePrice) || !validateNumber(newCryptocurrency.currentPrice)) {
+        toast({
+          description: 'Please enter valid numbers for amount and prices',
+        })
+        return
+      }
+      const crypto: Cryptocurrency = {
+        id: cryptocurrencies.length + 1,
+        name: newCryptocurrency.name,
+        symbol: newCryptocurrency.symbol,
+        amount: parseFloat(newCryptocurrency.amount),
+        purchasePrice: parseFloat(newCryptocurrency.purchasePrice),
+        currentPrice: parseFloat(newCryptocurrency.currentPrice),
+      }
+      const updatedCryptocurrencies = [...cryptocurrencies, crypto]
+      setCryptocurrencies(updatedCryptocurrencies)
+      setNewCryptocurrency({ name: '', symbol: '', amount: '', purchasePrice: '', currentPrice: '' })
+      saveData()
+      toast({
+        description: 'Cryptocurrency added successfully',
+      })
+    } else {
+      toast({
+        description: 'Please fill in all fields for the cryptocurrency',
+      })
+    }
+  }
+
+  const deleteCryptocurrency = (id: number) => {
+    const updatedCryptocurrencies = cryptocurrencies.filter(crypto => crypto.id !== id)
+    setCryptocurrencies(updatedCryptocurrencies)
+    saveData()
+    toast({
+      description: 'Cryptocurrency deleted successfully',
+    })
+  }
+
+  const getInvestmentBreakdownData = () => {
+    const investmentData = investments.reduce((acc, inv) => {
+      acc[inv.type] = (acc[inv.type] || 0) + inv.balance
+      return acc
+    }, {} as Record<string, number>)
+
+    const totalCryptoValue = cryptocurrencies.reduce((sum, crypto) => sum + crypto.amount * crypto.currentPrice, 0)
+    investmentData['Crypto'] = totalCryptoValue
+
+    return {
+      labels: Object.keys(investmentData),
+      datasets: [
+        {
+          data: Object.values(investmentData),
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+          ],
+          borderWidth: 1,
+        },
+      ],
     }
   }
 
@@ -768,6 +942,8 @@ export default function FinanceTracker() {
               <Button variant="ghost" onClick={() => setActiveTab('transactions')}>Transactions</Button>
               <Button variant="ghost" onClick={() => setActiveTab('goals')}>Goals</Button>
               <Button variant="ghost" onClick={() => setActiveTab('budget')}>Budget</Button>
+              <Button variant="ghost" onClick={() => setActiveTab('portfolio')}>Portfolio</Button>
+              <Button variant="ghost" onClick={() => setActiveTab('crypto')}>Crypto</Button>
               <Button variant="ghost" onClick={() => setActiveTab('insights')}>Insights</Button>
             </div>
             <div className="flex items-center space-x-2">
@@ -840,11 +1016,13 @@ export default function FinanceTracker() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-800">
+          <TabsList className="grid w-full grid-cols-7 bg-gray-800">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-gray-700 text-white">Dashboard</TabsTrigger>
             <TabsTrigger value="transactions" className="data-[state=active]:bg-gray-700 text-white">Transactions</TabsTrigger>
             <TabsTrigger value="goals" className="data-[state=active]:bg-gray-700 text-white">Goals</TabsTrigger>
             <TabsTrigger value="budget" className="data-[state=active]:bg-gray-700 text-white">Budget</TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gray-700 text-white">Portfolio</TabsTrigger>
+            <TabsTrigger value="crypto" className="data-[state=active]:bg-gray-700 text-white">Crypto</TabsTrigger>
             <TabsTrigger value="insights" className="data-[state=active]:bg-gray-700 text-white">Insights</TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard">
@@ -854,8 +1032,8 @@ export default function FinanceTracker() {
                   <CardTitle>Financial Overview</CardTitle>
                 </CardHeader>
                 <CardContent className="relative">
-                  <Doughnut
-                    data={doughnutChartData}
+                  <PolarArea
+                    data={getFinancialBreakdownData()}
                     options={{
                       responsive: true,
                       plugins: {
@@ -867,39 +1045,27 @@ export default function FinanceTracker() {
                             label: function(context) {
                               const label = context.label || '';
                               const value = context.raw as number;
-                              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0) as number;
-                              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                              const total = context.dataset.data.reduce((a: number, b: number) => a + Math.abs(b as number), 0) as number;
+                              const percentage = total > 0 ? ((Math.abs(value) / total) * 100).toFixed(1) : '0.0';
                               return `${label}: ${formatCurrency(value)} (${percentage}%)`;
                             }
                           }
                         }
                       },
-                      onClick: (event, elements) => {
-                        if (elements && elements.length > 0) {
-                          const clickedElement = elements[0];
-                          const label = doughnutChartData.labels[clickedElement.index];
-                          toast({
-                            title: `${label} Details`,
-                            description: `Balance: ${formatCurrency(doughnutChartData.datasets[0].data[clickedElement.index])}`,
-                          });
+                      scales: {
+                        r: {
+                          ticks: {
+                            display: false
+                          }
                         }
-                      },
-                      onHover: (event, elements) => {
-                        const chartElement = event.native?.target as HTMLElement;
-                        if (elements && elements.length) {
-                          chartElement.style.cursor = 'pointer';
-                          setHoveredSection(doughnutChartData.labels[elements[0].index] as string);
-                        } else {
-                          chartElement.style.cursor = 'default';
-                          setHoveredSection(null);
-                        }
-                      },
+                      }
                     }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {hoveredSection === 'Chequing' && <Wallet className="h-12 w-12 text-teal-500" />}
                     {hoveredSection === 'Savings' && <PiggyBank className="h-12 w-12 text-yellow-500" />}
                     {hoveredSection === 'Debt' && <CreditCard className="h-12 w-12 text-pink-500" />}
+                    {hoveredSection === 'Net Worth' && <DollarSign className="h-12 w-12 text-purple-500" />}
                     {!hoveredSection && <DollarSign className="h-12 w-12 text-gray-400" />}
                   </div>
                 </CardContent>
@@ -939,10 +1105,10 @@ export default function FinanceTracker() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Spending Overview</CardTitle>
+                  <CardTitle>Cash Flow Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Line data={getSpendingTrendsData()} options={{ responsive: true }} />
+                  <Line data={getCashFlowData()} options={{ responsive: true }} />
                 </CardContent>
               </Card>
               <Card>
@@ -951,17 +1117,13 @@ export default function FinanceTracker() {
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[300px]">
-                    {generateBudgetRecommendations(
-                      income > 0 ? (savingsBalance / income) * 100 : 0,
-                      expenses > 0 ? savingsBalance / expenses : 0,
-                      income > 0 ? expenses / income : 0
-                    ).map((recommendation, index) => (
+                    {generateBudgetRecommendations().map((recommendation, index) => (
                       <div key={index} className="flex items-start space-x-4 mb-4 bg-gray-800 p-4 rounded-lg">
                         <div className="flex-shrink-0 mt-1">
                           {recommendation.icon}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg mb-1">{recommendation.title}</h3>
+                          <h3 className="font-semibold text-lg mb-1 text-white">{recommendation.title}</h3>
                           <p className="text-sm text-gray-300">{recommendation.description}</p>
                         </div>
                       </div>
@@ -1128,10 +1290,10 @@ export default function FinanceTracker() {
                           <TableCell>{formatCurrency(goal.current)}</TableCell>
                           <TableCell>{goal.deadline}</TableCell>
                           <TableCell>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
                               <div
                                 className="bg-blue-600 h-2.5 rounded-full"
-                                style={{ width: `${(goal.current / goal.target) * 100}%` }}
+                                style={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <span className="text-sm">{((goal.current / goal.target) * 100).toFixed(1)}%</span>
@@ -1204,6 +1366,187 @@ export default function FinanceTracker() {
                           </TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => deleteBudgetCategory(item.category)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="portfolio">
+            <Card>
+              <CardHeader>
+                <CardTitle>Investment Portfolio</CardTitle>
+                <CardDescription>Manage your investments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                    <Select
+                      value={newInvestment.type}
+                      onValueChange={(value: 'RRSP' | 'TFSA' | 'GIC' | 'OSAP') => setNewInvestment({ ...newInvestment, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="RRSP">RRSP</SelectItem>
+                        <SelectItem value="TFSA">TFSA</SelectItem>
+                        <SelectItem value="GIC">GIC</SelectItem>
+                        <SelectItem value="OSAP">OSAP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="text"
+                      placeholder="Balance"
+                      value={newInvestment.balance}
+                      onChange={(e) => setNewInvestment({ ...newInvestment, balance: e.target.value })}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Interest Rate (%)"
+                      value={newInvestment.interestRate}
+                      onChange={(e) => setNewInvestment({ ...newInvestment, interestRate: e.target.value })}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Maturity Date"
+                      value={newInvestment.maturityDate}
+                      onChange={(e) => setNewInvestment({ ...newInvestment, maturityDate: e.target.value })}
+                    />
+                    <Button onClick={addInvestment}>Add Investment</Button>
+                  </div>
+                </div>
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Balance</TableHead>
+                        <TableHead>Interest Rate</TableHead>
+                        <TableHead>Maturity Date</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {investments.map((investment) => (
+                        <TableRow key={investment.id}>
+                          <TableCell>{investment.type}</TableCell>
+                          <TableCell>{formatCurrency(investment.balance)}</TableCell>
+                          <TableCell>{investment.interestRate ? `${investment.interestRate}%` : 'N/A'}</TableCell>
+                          <TableCell>{investment.maturityDate || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={() => deleteInvestment(investment.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold mb-4">Investment Breakdown</h3>
+                  <div className="w-full max-w-md">
+                    <Doughnut
+                      data={getInvestmentBreakdownData()}
+                      options={{
+                        responsive: true,
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw as number;
+                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0) as number;
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                                return `${label}: ${formatCurrency(value)} (${percentage}%)`;
+                              }
+                            }
+                          }
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="crypto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cryptocurrency Holdings</CardTitle>
+                <CardDescription>Track your cryptocurrency investments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                    <Input
+                      placeholder="Name"
+                      value={newCryptocurrency.name}
+                      onChange={(e) => setNewCryptocurrency({ ...newCryptocurrency, name: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Symbol"
+                      value={newCryptocurrency.symbol}
+                      onChange={(e) => setNewCryptocurrency({ ...newCryptocurrency, symbol: e.target.value })}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Amount"
+                      value={newCryptocurrency.amount}
+                      onChange={(e) => setNewCryptocurrency({ ...newCryptocurrency, amount: e.target.value })}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Purchase Price"
+                      value={newCryptocurrency.purchasePrice}
+                      onChange={(e) => setNewCryptocurrency({ ...newCryptocurrency, purchasePrice: e.target.value })}
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Current Price"
+                      value={newCryptocurrency.currentPrice}
+                      onChange={(e) => setNewCryptocurrency({ ...newCryptocurrency, currentPrice: e.target.value })}
+                    />
+                    <Button onClick={addCryptocurrency}>Add Cryptocurrency</Button>
+                  </div>
+                </div>
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Symbol</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Purchase Price</TableHead>
+                        <TableHead>Current Price</TableHead>
+                        <TableHead>Total Value</TableHead>
+                        <TableHead>Profit/Loss</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cryptocurrencies.map((crypto) => (
+                        <TableRow key={crypto.id}>
+                          <TableCell>{crypto.name}</TableCell>
+                          <TableCell>{crypto.symbol}</TableCell>
+                          <TableCell>{crypto.amount}</TableCell>
+                          <TableCell>{formatCurrency(crypto.purchasePrice)}</TableCell>
+                          <TableCell>{formatCurrency(crypto.currentPrice)}</TableCell>
+                          <TableCell>{formatCurrency(crypto.amount * crypto.currentPrice)}</TableCell>
+                          <TableCell className={crypto.currentPrice > crypto.purchasePrice ? 'text-green-500' : 'text-red-500'}>
+                            {formatCurrency((crypto.currentPrice - crypto.purchasePrice) * crypto.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={() => deleteCryptocurrency(crypto.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
